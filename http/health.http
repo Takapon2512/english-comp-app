@@ -1,0 +1,11 @@
+### 環境変数
+@baseUrl = http://localhost:8080
+
+### ヘルスチェック
+GET {{baseUrl}}/health
+
+### レスポンス例
+# {
+#   "status": "ok",
+#   "timestamp": "2024-09-13T12:34:56Z"
+# }

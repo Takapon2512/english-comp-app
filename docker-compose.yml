@@ -1,0 +1,73 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: english-app-api
+    ports:
+      - "8080:8080"
+    volumes:
+      - .:/app
+      - go-modules:/go/pkg/mod
+    environment:
+      - GO_ENV=development
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_USER=english_app
+      - DB_PASSWORD=english_app_password
+      - DB_NAME=english_app
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - english-app-network
+
+  db:
+    image: mysql:8.0
+    container_name: english-app-db
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=root_password
+      - MYSQL_DATABASE=english_app
+      - MYSQL_USER=english_app
+      - MYSQL_PASSWORD=english_app_password
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./docker/mysql/init:/docker-entrypoint-initdb.d
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "english_app", "--password=english_app_password"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - english-app-network
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    platform: linux/amd64
+    container_name: english-app-phpmyadmin
+    ports:
+      - "8081:80"
+    environment:
+      - PMA_HOST=db
+      - PMA_USER=english_app
+      - PMA_PASSWORD=english_app_password
+    depends_on:
+      - db
+    networks:
+      - english-app-network
+
+volumes:
+  mysql_data:
+    driver: local
+  go-modules:
+    driver: local
+
+networks:
+  english-app-network:
+    driver: bridge
+

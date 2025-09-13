@@ -1,0 +1,47 @@
+# バイナリファイル
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+main
+
+# テストバイナリ
+*.test
+
+# カバレッジファイル
+*.out
+
+# 依存関係ディレクトリ
+vendor/
+
+# IDE設定
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# 環境変数ファイル
+.env
+.env.local
+.env.*.local
+
+# ログファイル
+*.log
+
+# OS生成ファイル
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# ビルドディレクトリ
+bin/
+tmp/
+
+# データベース関連
+*.db
+*.sqlite

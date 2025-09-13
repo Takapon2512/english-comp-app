@@ -1,0 +1,95 @@
+### 環境変数
+@baseUrl = http://localhost:8080/api/v1/auth
+
+### ユーザー登録 (サインアップ)
+POST {{baseUrl}}/signup
+Content-Type: application/json
+
+@email = takapontype0924@gmail.com
+@password = Nagano_12345
+@name = Takayuki Nagano
+
+{
+    "Enail": "{{email}}",
+    "Password": "{{password}}",
+    "Name": "{{name}}"
+}
+
+### レスポンス例
+# {
+#   "access_token": "eyJhbGciOiJIUzI1NiIs...",
+#   "refresh_token": "abc123...",
+#   "expires_in": 86400,
+#   "token_type": "Bearer",
+#   "user": {
+#     "id": "user123",
+#     "email": "test@example.com",
+#     "name": "Test User"
+#   }
+# }
+
+### ログイン
+POST {{baseUrl}}/login
+Content-Type: application/json
+
+{
+    "email": "{{email}}",
+    "password": "{{password}}"
+}
+
+### レスポンス例
+# {
+#   "access_token": "eyJhbGciOiJIUzI1NiIs...",
+#   "refresh_token": "abc123...",
+#   "expires_in": 86400,
+#   "token_type": "Bearer",
+#   "user": {
+#     "id": "user123",
+#     "email": "test@example.com",
+#     "name": "Test User"
+#   }
+# }
+
+### リフレッシュトークンの更新
+POST {{baseUrl}}/refresh
+Content-Type: application/json
+
+{
+    "refresh_token": "your-refresh-token-here"
+}
+
+### レスポンス例
+# {
+#   "access_token": "eyJhbGciOiJIUzI1NiIs...",
+#   "expires_in": 86400,
+#   "token_type": "Bearer"
+# }
+
+### パスワードリセットリクエスト
+POST {{baseUrl}}/password/reset-request
+Content-Type: application/json
+
+{
+    "email": "{{email}}"
+}
+
+### レスポンス例
+# {
+#   "status": "success",
+#   "message": "パスワードリセットメールを送信しました"
+# }
+
+### パスワードリセット
+POST {{baseUrl}}/password/reset
+Content-Type: application/json
+
+{
+    "token": "your-reset-token",
+    "new_password": "newpassword123"
+}
+
+### レスポンス例
+# {
+#   "status": "success",
+#   "message": "パスワードを更新しました"
+# }

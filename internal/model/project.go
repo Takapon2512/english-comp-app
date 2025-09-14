@@ -1,0 +1,69 @@
+package model
+
+import (
+	"time"
+)
+
+// Project はプロジェクトを表す構造体です
+type Project struct {
+	ID          string    `json:"id" gorm:"primaryKey;type:char(36)"`
+	UserID      string    `json:"user_id" gorm:"type:char(36);not null"`
+	Name        string    `json:"name" gorm:"type:varchar(100);not null"`
+	Description string    `json:"description" gorm:"type:text"`
+	Tags        []Tag     `json:"tags" gorm:"foreignKey:ProjectID"`
+	CreatedAt   time.Time `json:"created_at" gorm:"not null"`
+	UpdatedAt   time.Time `json:"updated_at" gorm:"not null"`
+	User        *User     `json:"-" gorm:"foreignKey:UserID"`
+}
+
+// Tag はプロジェクトのタグを表す構造体です
+type Tag struct {
+	tableName struct{}  `gorm:"table:project_tags"`
+	ID        string    `json:"id" gorm:"primaryKey;type:char(36)"`
+	ProjectID string    `json:"project_id" gorm:"type:char(36);not null"`
+	Name      string    `json:"name" gorm:"type:varchar(30);not null"`
+	CreatedAt time.Time `json:"created_at" gorm:"not null"`
+}
+
+// CreateProjectRequest はプロジェクト作成リクエストを表す構造体です
+type CreateProjectRequest struct {
+	Name        string   `json:"name" binding:"required,max=100"`
+	Description string   `json:"description" binding:"max=1000"`
+	Tags        []string `json:"tags" binding:"dive,max=30"`
+}
+
+// CreateProjectResponse はプロジェクト作成レスポンスを表す構造体です
+type CreateProjectResponse struct {
+	ID          string    `json:"id"`
+	Name        string    `json:"name"`
+	Description string    `json:"description"`
+	Tags        []string  `json:"tags"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+// プロジェクト一覧取得リクエスト
+type GetProjectsRequest struct {
+	UserID  string `json:"-"` // 内部使用のため、JSONにはシリアライズしない
+	Page    int    `form:"page,default=1" binding:"min=0"`
+	PerPage int    `form:"per_page,default=10" binding:"min=0,max=100"`
+	Tag     string `form:"tag" binding:"omitempty,max=30"`
+}
+
+// プロジェクト一覧取得レスポンス
+type GetProjectsResponse struct {
+	Projects []Project `json:"projects"`
+	Total    int       `json:"total"`
+	Page     int       `json:"page"`
+	PerPage  int       `json:"per_page"`
+}
+
+// プロジェクト詳細取得リクエスト
+type GetProjectDetailRequest struct {
+	ID string `param:"id" binding:"required"`
+}
+
+// プロジェクト詳細取得レスポンス
+type GetProjectDetailResponse struct {
+	Project Project `json:"project"`
+}

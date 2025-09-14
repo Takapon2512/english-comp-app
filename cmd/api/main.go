@@ -68,12 +68,15 @@ func main() {
 
 	// リポジトリの初期化
 	userRepo := repository.NewUserRepository(db)
+	projectRepo := repository.NewProjectRepository(db)
 
 	// サービスの初期化
 	authService := service.NewAuthService(userRepo)
+	projectService := service.NewProjectService(db, projectRepo)
 
 	// ハンドラーの初期化
 	authHandler := handler.NewAuthHandler(authService, secretKey)
+	projectHandler := handler.NewProjectHandler(projectService)
 
 	// 認証ミドルウェアの初期化
 	authMiddleware := middleware.NewAuthMiddleware(middleware.AuthConfig{
@@ -102,6 +105,10 @@ func main() {
 				"email":   email,
 			})
 		})
+
+		api.POST("/projects", projectHandler.CreateProject)
+		api.GET("/projects", projectHandler.GetProjects)
+		api.GET("/projects/:id", projectHandler.GetProjectDetail)
 	}
 
 	// サーバーの起動

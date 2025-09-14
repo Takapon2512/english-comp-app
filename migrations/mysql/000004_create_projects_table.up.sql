@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS projects (
-    id CHAR(26) NOT NULL,
-    user_id CHAR(26) NOT NULL,
+    id CHAR(36) NOT NULL,
+    user_id CHAR(36) NOT NULL,
     name VARCHAR(100) NOT NULL,
     description TEXT,
     created_at DATETIME NOT NULL,

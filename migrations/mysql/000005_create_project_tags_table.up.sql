@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS project_tags (
-    id CHAR(26) NOT NULL,
-    project_id CHAR(26) NOT NULL,
+    id CHAR(36) NOT NULL,
+    project_id CHAR(36) NOT NULL,
     name VARCHAR(30) NOT NULL,
     created_at DATETIME NOT NULL,
     PRIMARY KEY (id),

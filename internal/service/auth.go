@@ -67,13 +67,17 @@ func (s *authService) Signup(email, password, name string) (*model.User, error) 
 		return nil, err
 	}
 
+	newUserID := uuid.New().String()
+
 	user := &model.User{
-		ID:           uuid.New().String(),
+		ID:           newUserID,
 		Email:        email,
 		PasswordHash: string(hashedPassword),
 		Name:         name,
 		CreatedAt:    time.Now(),
 		UpdatedAt:    time.Now(),
+		CreatedBy:    newUserID,
+		UpdatedBy:    newUserID,
 	}
 
 	err = s.userRepo.Create(user)
@@ -91,6 +95,8 @@ func (s *authService) CreateRefreshToken(userID string) (*model.RefreshToken, er
 		TokenHash: uuid.New().String(),                 // 実際のプロダクションでは、より安全なトークン生成方法を使用すべき
 		ExpiresAt: time.Now().Add(30 * 24 * time.Hour), // 30日
 		CreatedAt: time.Now(),
+		CreatedBy: userID,
+		UpdatedBy: userID,
 	}
 
 	err := s.userRepo.CreateRefreshToken(token)

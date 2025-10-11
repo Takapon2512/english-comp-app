@@ -1,0 +1,87 @@
+Project english_comp_app {
+  database_type: 'MySQL'
+  Note: 'English Composition Application Database Schema'
+}
+
+Table users {
+  id char(36) [pk]
+  email varchar(255) [unique, not null]
+  password_hash varchar(255) [not null]
+  name varchar(100) [not null]
+  email_verified boolean [default: false, not null]
+  created_by char(36) [not null]
+  updated_by char(36) [not null]
+  deleted_by char(36) [null]
+  created_at timestamp [default: `CURRENT_TIMESTAMP`, not null]
+  updated_at timestamp [default: `CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`, not null]
+  deleted_at timestamp [null]
+}
+
+Table refresh_tokens {
+  id char(36) [pk]
+  user_id char(36)
+  token_hash varchar(255) [unique, not null]
+  created_by char(36) [not null]
+  updated_by char(36) [not null]
+  deleted_by char(36) [null]
+  expires_at timestamp [not null]
+  created_at timestamp [default: `CURRENT_TIMESTAMP`, not null]
+  updated_at timestamp [default: `CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`, not null]
+  deleted_at timestamp [null]
+}
+
+Table password_reset_tokens {
+  id char(36) [pk]
+  user_id char(36)
+  token_hash varchar(255) [unique, not null]
+  created_by char(36) [not null]
+  updated_by char(36) [not null]
+  deleted_by char(36) [null]
+  created_at timestamp [default: `CURRENT_TIMESTAMP`, not null]
+  updated_at timestamp [default: `CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`, not null]
+  deleted_at timestamp [null]
+}
+
+Table projects {
+  id char(36) [pk]
+  user_id char(36)
+  name varchar(100) [not null]
+  description text
+  created_by char(36) [not null]
+  updated_by char(36) [not null]
+  deleted_by char(36) [null]
+  created_at timestamp [default: `CURRENT_TIMESTAMP`, not null]
+  updated_at timestamp [default: `CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`, not null]
+  deleted_at timestamp [null]
+}
+
+Table project_tags {
+  id char(36) [pk]
+  project_id char(36)
+  user_tags_id char(36) [not null]
+  created_by char(36) [not null]
+  updated_by char(36) [not null]
+  deleted_by char(36) [null]
+  created_at timestamp [default: `CURRENT_TIMESTAMP`, not null]
+  updated_at timestamp [default: `CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`, not null]
+  deleted_at timestamp [null]
+}
+
+Table user_tags {
+  id char(36) [pk]
+  user_id char(36)
+  name varchar(30) [not null]
+  created_by char(36) [not null]
+  updated_by char(36) [not null]
+  deleted_by char(36) [null]
+  created_at timestamp [default: `CURRENT_TIMESTAMP`, not null]
+  updated_at timestamp [default: `CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`, not null]
+  deleted_at timestamp [null]
+}
+
+Ref: users.id < refresh_tokens.user_id [delete: restrict, update: cascade]
+Ref: users.id < password_reset_tokens.user_id [delete: restrict, update: cascade]
+Ref: users.id < projects.user_id [delete: restrict, update: cascade]
+Ref: users.id < user_tags.user_id [delete: cascade, update: cascade]
+Ref: projects.id < project_tags.project_id [delete: cascade, update: cascade]
+Ref: user_tags.id < project_tags.user_tags_id [delete: cascade, update: cascade]

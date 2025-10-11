@@ -29,10 +29,6 @@ func NewProjectService(db *gorm.DB, repo repository.ProjectRepository) ProjectSe
 }
 
 func (s *projectService) CreateProject(userID string, req *model.CreateProjectRequest) (*model.CreateProjectResponse, error) {
-	if len(req.Tags) > 10 {
-		return nil, fmt.Errorf("タグの数が上限（10個）を超えています")
-	}
-
 	now := time.Now()
 	project := &model.Project{
 		UserID:      userID,
@@ -40,25 +36,14 @@ func (s *projectService) CreateProject(userID string, req *model.CreateProjectRe
 		Description: req.Description,
 		CreatedAt:   now,
 		UpdatedAt:   now,
+		CreatedBy:   userID,
+		UpdatedBy:   userID,
 	}
 
 	err := s.db.Transaction(func(tx *gorm.DB) error {
 
 		if err := s.repo.CreateProject(project); err != nil {
 			return fmt.Errorf("プロジェクトの作成に失敗しました: %w", err)
-		}
-
-		var tags []model.Tag
-		for _, tagName := range req.Tags {
-			tags = append(tags, model.Tag{
-				ProjectID: project.ID,
-				Name:      tagName,
-				CreatedAt: now,
-			})
-		}
-
-		if err := s.repo.CreateTags(tags); err != nil {
-			return fmt.Errorf("タグの作成に失敗しました: %w", err)
 		}
 
 		return nil
@@ -73,7 +58,6 @@ func (s *projectService) CreateProject(userID string, req *model.CreateProjectRe
 		ID:          project.ID,
 		Name:        project.Name,
 		Description: project.Description,
-		Tags:        req.Tags,
 		CreatedAt:   project.CreatedAt,
 		UpdatedAt:   project.UpdatedAt,
 	}

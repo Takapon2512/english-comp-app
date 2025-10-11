@@ -10,26 +10,17 @@ type Project struct {
 	UserID      string    `json:"user_id" gorm:"type:char(36);not null"`
 	Name        string    `json:"name" gorm:"type:varchar(100);not null"`
 	Description string    `json:"description" gorm:"type:text"`
-	Tags        []Tag     `json:"tags" gorm:"foreignKey:ProjectID"`
 	CreatedAt   time.Time `json:"created_at" gorm:"not null"`
 	UpdatedAt   time.Time `json:"updated_at" gorm:"not null"`
 	User        *User     `json:"-" gorm:"foreignKey:UserID"`
-}
-
-// Tag はプロジェクトのタグを表す構造体です
-type Tag struct {
-	tableName struct{}  `gorm:"table:project_tags"`
-	ID        string    `json:"id" gorm:"primaryKey;type:char(36)"`
-	ProjectID string    `json:"project_id" gorm:"type:char(36);not null"`
-	Name      string    `json:"name" gorm:"type:varchar(30);not null"`
-	CreatedAt time.Time `json:"created_at" gorm:"not null"`
+	CreatedBy   string    `json:"created_by" gorm:"type:char(36);not null"`
+	UpdatedBy   string    `json:"updated_by" gorm:"type:char(36);not null"`
 }
 
 // CreateProjectRequest はプロジェクト作成リクエストを表す構造体です
 type CreateProjectRequest struct {
 	Name        string   `json:"name" binding:"required,max=100"`
 	Description string   `json:"description" binding:"max=1000"`
-	Tags        []string `json:"tags" binding:"dive,max=30"`
 }
 
 // CreateProjectResponse はプロジェクト作成レスポンスを表す構造体です
@@ -37,7 +28,6 @@ type CreateProjectResponse struct {
 	ID          string    `json:"id"`
 	Name        string    `json:"name"`
 	Description string    `json:"description"`
-	Tags        []string  `json:"tags"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 }

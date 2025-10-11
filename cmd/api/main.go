@@ -69,14 +69,17 @@ func main() {
 	// リポジトリの初期化
 	userRepo := repository.NewUserRepository(db)
 	projectRepo := repository.NewProjectRepository(db)
+	userTagsRepo := repository.NewUserTagsRepository(db)
 
 	// サービスの初期化
 	authService := service.NewAuthService(userRepo)
 	projectService := service.NewProjectService(db, projectRepo)
+	userTagsService := service.NewUserTagsService(db, userTagsRepo)
 
 	// ハンドラーの初期化
 	authHandler := handler.NewAuthHandler(authService, secretKey)
 	projectHandler := handler.NewProjectHandler(projectService)
+	userTagsHandler := handler.NewUserTagsHandler(userTagsService)
 
 	// 認証ミドルウェアの初期化
 	authMiddleware := middleware.NewAuthMiddleware(middleware.AuthConfig{
@@ -109,6 +112,9 @@ func main() {
 		api.POST("/projects", projectHandler.CreateProject)
 		api.GET("/projects", projectHandler.GetProjects)
 		api.GET("/projects/:id", projectHandler.GetProjectDetail)
+
+		api.POST("/user-tags", userTagsHandler.CreateUserTags)
+		api.GET("/user-tags", userTagsHandler.GetUserTags)
 	}
 
 	// サーバーの起動

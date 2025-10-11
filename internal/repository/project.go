@@ -11,7 +11,6 @@ import (
 
 type ProjectRepository interface {
 	CreateProject(project *model.Project) error
-	CreateTags(tags []model.Tag) error
 	GetProjects(req *model.GetProjectsRequest) (*model.GetProjectsResponse, error)
 	GetProjectDetail(req *model.GetProjectDetailRequest) (*model.GetProjectDetailResponse, error)
 }
@@ -29,20 +28,6 @@ func (r *projectRepository) CreateProject(project *model.Project) error {
 		project.ID = uuid.New().String()
 	}
 	return r.db.Create(project).Error
-}
-
-func (r *projectRepository) CreateTags(tags []model.Tag) error {
-	if len(tags) == 0 {
-		return nil
-	}
-
-	for i := range tags {
-		if tags[i].ID == "" {
-			tags[i].ID = uuid.New().String()
-		}
-	}
-
-	return r.db.Table("project_tags").Create(&tags).Error
 }
 
 // GetProjects プロジェクト一覧を取得する

@@ -1,10 +1,14 @@
-CREATE TABLE IF NOT EXISTS projects (
+CREATE TABLE projects (
     id CHAR(36) NOT NULL,
     user_id CHAR(36) NOT NULL,
     name VARCHAR(100) NOT NULL,
     description TEXT,
-    created_at DATETIME NOT NULL,
-    updated_at DATETIME NOT NULL,
+    created_by CHAR(36) NOT NULL,
+    updated_by CHAR(36) NOT NULL,
+    deleted_by CHAR(36) NULL DEFAULT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL DEFAULT NULL,
     PRIMARY KEY (id),
     INDEX user_id_idx (user_id),
     INDEX created_at_idx (created_at),

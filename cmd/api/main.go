@@ -70,16 +70,19 @@ func main() {
 	userRepo := repository.NewUserRepository(db)
 	projectRepo := repository.NewProjectRepository(db)
 	userTagsRepo := repository.NewUserTagsRepository(db)
+	categoryMastersRepo := repository.NewCategoryMastersRepository(db)
 
 	// サービスの初期化
 	authService := service.NewAuthService(userRepo)
 	projectService := service.NewProjectService(db, projectRepo)
 	userTagsService := service.NewUserTagsService(db, userTagsRepo)
+	categoryMastersService := service.NewCategoryMastersService(db, categoryMastersRepo)
 
 	// ハンドラーの初期化
 	authHandler := handler.NewAuthHandler(authService, secretKey)
 	projectHandler := handler.NewProjectHandler(projectService)
 	userTagsHandler := handler.NewUserTagsHandler(userTagsService)
+	categoryMastersHandler := handler.NewCategoryMastersHandler(categoryMastersService)
 
 	// 認証ミドルウェアの初期化
 	authMiddleware := middleware.NewAuthMiddleware(middleware.AuthConfig{
@@ -115,6 +118,11 @@ func main() {
 
 		api.POST("/user-tags", userTagsHandler.CreateUserTags)
 		api.GET("/user-tags", userTagsHandler.GetUserTags)
+		api.PUT("/user-tags/update", userTagsHandler.UpdateUserTags)
+		api.PUT("/user-tags/delete", userTagsHandler.DeleteUserTags)
+
+		api.GET("/category-masters", categoryMastersHandler.GetCategoryMasters)
+		// api.GET("/category-master", categoryMastersHandler.GetCategoryMastersByID)
 	}
 
 	// サーバーの起動

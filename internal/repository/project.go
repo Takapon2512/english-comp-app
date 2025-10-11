@@ -39,13 +39,12 @@ func (r *projectRepository) GetProjects(req *model.GetProjectsRequest) (*model.G
 
 	if req.Tag != "" {
 		query = query.Joins("JOIN project_tags ON projects.id = project_tags.project_id").
-			Where("project_tags.name = ?", req.Tag)
+			Joins("JOIN user_tags ON project_tags.user_tags_id = user_tags.id").
+			Where("user_tags.name = ?", req.Tag)
 	}
 
 	// タグ情報を事前読み込み
-	query = query.Preload("Tags", func(db *gorm.DB) *gorm.DB {
-		return db.Table("project_tags")
-	})
+	query = query.Preload("Tags").Preload("Tags.UserTag")
 
 	// 総件数を取得
 	if err := query.Count(&total).Error; err != nil {
@@ -77,9 +76,7 @@ func (r *projectRepository) GetProjectDetail(req *model.GetProjectDetailRequest)
 
 	query := r.db.Model(&model.Project{}).Where("id = ?", req.ID)
 
-	if err := query.Preload("Tags", func(db *gorm.DB) *gorm.DB {
-		return db.Table("project_tags")
-	}).First(&project).Error; err != nil {
+	if err := query.Preload("Tags").Preload("Tags.UserTag").First(&project).Error; err != nil {
 		return nil, fmt.Errorf("プロジェクトの取得に失敗しました: %w", err)
 	}
 

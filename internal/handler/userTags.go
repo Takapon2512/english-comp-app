@@ -61,3 +61,53 @@ func (h *UserTagsHandler) GetUserTags(c *gin.Context) {
 
 	c.JSON(http.StatusOK, response)
 }
+
+// updateUserTags ユーザータグを更新するハンドラー
+func (h *UserTagsHandler) UpdateUserTags(c *gin.Context) {
+	// コンテキストからユーザーIDを取得
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "認証が必要です"})
+		return
+	}
+
+	var req model.UpdateUserTagsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "無効なリクエストです"})
+		return
+	}
+
+	// ユーザータグ更新
+	response, err := h.userTagsService.UpdateUserTags(userID.(string), &req)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, response)
+}
+
+// deleteUserTags ユーザータグを削除するハンドラー
+func (h *UserTagsHandler) DeleteUserTags(c *gin.Context) {
+	// コンテキストからユーザーIDを取得
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "認証が必要です"})
+		return
+	}
+
+	var req model.DeleteUserTagsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "無効なリクエストです"})
+		return
+	}
+
+	// ユーザータグ削除
+	response, err := h.userTagsService.DeleteUserTags(userID.(string), &req)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, response)
+}

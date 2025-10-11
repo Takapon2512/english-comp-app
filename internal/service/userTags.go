@@ -82,15 +82,24 @@ func (s *userTagsService) GetUserTags(userID string) (*model.GetUserTagsResponse
 
 // updateUserTags ユーザータグを更新する
 func (s *userTagsService) UpdateUserTags(userID string, req *model.UpdateUserTagsRequest) (*model.UpdateUserTagsResponse, error) {
+	// 既存のレコードを取得
+	existingUserTags, err := s.repo.GetUserTagsByID(req.ID, userID)
+	if err != nil {
+		return nil, fmt.Errorf("ユーザータグが見つかりません: %w", err)
+	}
+
 	now := time.Now()
 	userTags := &model.UserTags{
 		ID:        req.ID,
+		UserID:    userID,
 		Name:      req.Name,
+		CreatedAt: existingUserTags.CreatedAt, // 既存の値を保持
 		UpdatedAt: now,
+		CreatedBy: existingUserTags.CreatedBy, // 既存の値を保持
 		UpdatedBy: userID,
 	}
 
-	err := s.db.Transaction(func(tx *gorm.DB) error {
+	err = s.db.Transaction(func(tx *gorm.DB) error {
 		if err := s.repo.UpdateUserTags(userTags); err != nil {
 			return fmt.Errorf("ユーザータグの更新に失敗しました: %w", err)
 		}
@@ -112,13 +121,25 @@ func (s *userTagsService) UpdateUserTags(userID string, req *model.UpdateUserTag
 func (s *userTagsService) DeleteUserTags(userId string, req *model.DeleteUserTagsRequest) (*model.DeleteUserTagsResponse, error) {
 	now := time.Now()
 
-	userTags := &model.UserTags{
-		ID:        req.ID,
-		DeletedAt: gorm.DeletedAt{Time: now},
-		DeletedBy: &userId,
+	// 既存のレコードを取得
+	existingUserTags, err := s.repo.GetUserTagsByID(req.ID, userId)
+	if err != nil {
+		return nil, fmt.Errorf("ユーザータグが見つかりません: %w", err)
 	}
 
-	err := s.db.Transaction(func(tx *gorm.DB) error {
+	userTags := &model.UserTags{
+		ID:        req.ID,
+		UserID:    userId,
+		Name:      existingUserTags.Name,
+		CreatedAt: existingUserTags.CreatedAt,
+		UpdatedAt: existingUserTags.UpdatedAt,
+		CreatedBy: existingUserTags.CreatedBy,
+		UpdatedBy: existingUserTags.UpdatedBy,
+		DeletedAt: gorm.DeletedAt{Time: now},
+		DeletedBy: userId,
+	}
+
+	err = s.db.Transaction(func(tx *gorm.DB) error {
 		if err := s.repo.DeleteUserTags(userTags); err != nil {
 			return fmt.Errorf("ユーザータグの削除に失敗しました: %w", err)
 		}

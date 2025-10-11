@@ -14,7 +14,7 @@ type UserTags struct {
 	UpdatedAt time.Time      `json:"updated_at" gorm:"not null"`
 	CreatedBy string         `json:"created_by" gorm:"type:char(36);not null"`
 	UpdatedBy string         `json:"updated_by" gorm:"type:char(36);not null"`
-	DeletedBy *string        `json:"deleted_by" gorm:"type:char(36)"`
+	DeletedBy string         `json:"deleted_by" gorm:"type:char(36)"`
 	DeletedAt gorm.DeletedAt `json:"deleted_at" gorm:"index"`
 }
 

@@ -1,0 +1,11 @@
+CREATE TABLE category_masters (
+    id CHAR(36) PRIMARY KEY,
+    name VARCHAR(30) NOT NULL,
+    status VARCHAR(10) NOT NULL,
+    created_by CHAR(36) NOT NULL,
+    updated_by CHAR(36) NOT NULL,
+    deleted_by CHAR(36) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP NOT NULL,
+    deleted_at TIMESTAMP NULL
+);

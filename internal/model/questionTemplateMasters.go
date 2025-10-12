@@ -24,6 +24,11 @@ type QuestionTemplateMasters struct {
 	DeletedAt  		gorm.DeletedAt `json:"deleted_at" gorm:"index"`
 }
 
+type CategoryInfo struct {
+	ID        string         `json:"id"`
+	Name      string         `json:"name"`
+}
+
 type QuestionTemplateMastersSummary struct {
 	ID        string `json:"id"`
 	CategoryID string `json:"category_id"`
@@ -34,6 +39,7 @@ type QuestionTemplateMastersSummary struct {
 	Level      string `json:"level"`
 	EstimatedTime int `json:"estimated_time"`
 	Points int `json:"points"`
+	Category CategoryInfo `json:"category"`
 }
 
 type GetQuestionTemplateMastersSearchRequest struct {
@@ -42,7 +48,8 @@ type GetQuestionTemplateMastersSearchRequest struct {
 	Status     string `json:"status"`
 	Level      string `json:"level"`
 	EstimatedTime int `json:"estimated_time"`
-	Points int `json:"points"`
+	MinPoints int `json:"min_points"`
+	MaxPoints int `json:"max_points"`
 	Page       int    `json:"page"`
 	PerPage    int    `json:"per_page"`
 }

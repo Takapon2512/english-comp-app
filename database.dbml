@@ -107,6 +107,18 @@ Table category_masters {
   deleted_at timestamp [null]
 }
 
+Table project_questions {
+  id char(36) [pk]
+  project_id char(36) [not null]
+  question_template_master_id char(36) [not null]
+  created_by char(36) [not null]
+  updated_by char(36) [not null]
+  deleted_by char(36) [null]
+  created_at timestamp [default: `CURRENT_TIMESTAMP`, not null]
+  updated_at timestamp [default: `CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`, not null]
+  deleted_at timestamp [null]
+}
+
 Ref: users.id < refresh_tokens.user_id [delete: restrict, update: cascade]
 Ref: users.id < password_reset_tokens.user_id [delete: restrict, update: cascade]
 Ref: users.id < projects.user_id [delete: restrict, update: cascade]
@@ -114,3 +126,5 @@ Ref: users.id < user_tags.user_id [delete: cascade, update: cascade]
 Ref: projects.id < project_tags.project_id [delete: cascade, update: cascade]
 Ref: user_tags.id < project_tags.user_tags_id [delete: cascade, update: cascade]
 Ref: category_masters.id < question_template_masters.category_id [delete: cascade, update: cascade]
+Ref: project_questions.project_id < projects.id
+Ref: project_questions.question_template_master_id < question_template_masters.id

@@ -71,18 +71,24 @@ func main() {
 	projectRepo := repository.NewProjectRepository(db)
 	userTagsRepo := repository.NewUserTagsRepository(db)
 	categoryMastersRepo := repository.NewCategoryMastersRepository(db)
+	questionTemplateMastersRepo := repository.NewQuestionTemplateMastersRepository(db)
+	projectQuestionsRepo := repository.NewProjectQuestionsRepository(db)
 
 	// サービスの初期化
 	authService := service.NewAuthService(userRepo)
 	projectService := service.NewProjectService(db, projectRepo)
 	userTagsService := service.NewUserTagsService(db, userTagsRepo)
 	categoryMastersService := service.NewCategoryMastersService(db, categoryMastersRepo)
+	questionTemplateMastersService := service.NewQuestionTemplateMastersService(db, questionTemplateMastersRepo)
+	projectQuestionsService := service.NewProjectQuestionsService(db, projectQuestionsRepo, questionTemplateMastersRepo)
 
 	// ハンドラーの初期化
 	authHandler := handler.NewAuthHandler(authService, secretKey)
 	projectHandler := handler.NewProjectHandler(projectService)
 	userTagsHandler := handler.NewUserTagsHandler(userTagsService)
 	categoryMastersHandler := handler.NewCategoryMastersHandler(categoryMastersService)
+	questionTemplateMastersHandler := handler.NewQuestionMastersHandler(questionTemplateMastersService)
+	projectQuestionsHandler := handler.NewProjectQuestionsHandler(projectQuestionsService)
 
 	// 認証ミドルウェアの初期化
 	authMiddleware := middleware.NewAuthMiddleware(middleware.AuthConfig{
@@ -115,6 +121,7 @@ func main() {
 		api.POST("/projects", projectHandler.CreateProject)
 		api.GET("/projects", projectHandler.GetProjects)
 		api.GET("/projects/:id", projectHandler.GetProjectDetail)
+		api.POST("/projects/questions", projectQuestionsHandler.CreateProjectQuestions)
 
 		api.POST("/user-tags", userTagsHandler.CreateUserTags)
 		api.GET("/user-tags", userTagsHandler.GetUserTags)
@@ -123,6 +130,9 @@ func main() {
 
 		api.GET("/category-masters", categoryMastersHandler.GetCategoryMasters)
 		// api.GET("/category-master", categoryMastersHandler.GetCategoryMastersByID)
+
+		api.GET("/question-masters", questionTemplateMastersHandler.GetQuestionMasters)
+		api.GET("/question-masters/:id", questionTemplateMastersHandler.GetQuestionMasterByID)
 	}
 
 	// サーバーの起動

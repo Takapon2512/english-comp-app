@@ -34,3 +34,12 @@ type CreateProjectQuestionsRequest struct {
 type CreateProjectQuestionsResponse struct {
 	ProjectQuestions []ProjectQuestionsSummary `json:"project_questions"`
 }
+
+type GetProjectQuestionsRequest struct {
+	UserID    string `json:"user_id"`
+	ProjectID string `json:"project_id" binding:"required"`
+}
+
+type GetProjectQuestionsResponse struct {
+	Questions []QuestionTemplateMastersSummary `json:"questions"`
+}

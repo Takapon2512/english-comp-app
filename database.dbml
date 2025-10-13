@@ -119,12 +119,49 @@ Table project_questions {
   deleted_at timestamp [null]
 }
 
+Table question_answers {
+  id char(36) [pk]
+  user_id char(36) [not null]
+  project_id char(36) [not null]
+  question_template_master_id char(36) [not null]
+  user_answer text [null]
+  is_correction bool [not null, default: false]
+  created_by char(36) [not null]
+  updated_by char(36) [not null]
+  deleted_by char(36) [null]
+  created_at timestamp [default: `CURRENT_TIMESTAMP`, not null]
+  updated_at timestamp [default: `CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`, not null]
+  deleted_at timestamp [null]
+}
+
+Table correction_results {
+  id char(36) [pk]
+  question_answer_id char(36) [not null]
+  question_template_master_id char(36) [not null]
+  get_points int [not null, default: 0]
+  example_correction text [null]
+  correct_rate int [null]
+  advice text [null]
+  status varchar(20) [not null, default: 'PROCESSING']
+  created_by char(36) [not null]
+  updated_by char(36) [not null]
+  deleted_by char(36) [null]
+  created_at timestamp [default: `CURRENT_TIMESTAMP`, not null]
+  updated_at timestamp [default: `CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`, not null]
+  deleted_at timestamp [null]
+}
+
 Ref: users.id < refresh_tokens.user_id [delete: restrict, update: cascade]
 Ref: users.id < password_reset_tokens.user_id [delete: restrict, update: cascade]
 Ref: users.id < projects.user_id [delete: restrict, update: cascade]
 Ref: users.id < user_tags.user_id [delete: cascade, update: cascade]
+Ref: users.id < question_answers.user_id
 Ref: projects.id < project_tags.project_id [delete: cascade, update: cascade]
+Ref: projects.id < question_answers.project_id
 Ref: user_tags.id < project_tags.user_tags_id [delete: cascade, update: cascade]
 Ref: category_masters.id < question_template_masters.category_id [delete: cascade, update: cascade]
 Ref: project_questions.project_id < projects.id
 Ref: project_questions.question_template_master_id < question_template_masters.id
+Ref: question_template_masters.id < question_answers.question_template_master_id
+Ref: question_template_masters.id < correction_results.question_template_master_id
+Ref: question_answers.id < correction_results.question_answer_id

@@ -7,6 +7,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/joho/godotenv"
+
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"gorm.io/driver/mysql"
@@ -20,6 +22,10 @@ import (
 )
 
 func main() {
+	// .envファイルの読み込み
+	if err := godotenv.Load(); err != nil {
+		log.Println("Warning: .env file not found")
+	}
 	// データベース接続設定
 	dbUser := getEnvOrDefault("DB_USER", "root")
 	dbPass := getEnvOrDefault("DB_PASSWORD", "password")
@@ -73,6 +79,8 @@ func main() {
 	categoryMastersRepo := repository.NewCategoryMastersRepository(db)
 	questionTemplateMastersRepo := repository.NewQuestionTemplateMastersRepository(db)
 	projectQuestionsRepo := repository.NewProjectQuestionsRepository(db)
+	questionAnswersRepo := repository.NewQuestionAnswersRepository(db)
+	correctResultsRepo := repository.NewCorrectResultsRepository(db)
 
 	// サービスの初期化
 	authService := service.NewAuthService(userRepo)
@@ -81,6 +89,8 @@ func main() {
 	categoryMastersService := service.NewCategoryMastersService(db, categoryMastersRepo)
 	questionTemplateMastersService := service.NewQuestionTemplateMastersService(db, questionTemplateMastersRepo)
 	projectQuestionsService := service.NewProjectQuestionsService(db, projectQuestionsRepo, questionTemplateMastersRepo)
+	questionAnswersService := service.NewQuestionAnswersService(db, questionAnswersRepo)
+	correctResultsService := service.NewCorrectResultsService(db, correctResultsRepo, questionTemplateMastersRepo, questionAnswersRepo)
 
 	// ハンドラーの初期化
 	authHandler := handler.NewAuthHandler(authService, secretKey)
@@ -89,6 +99,8 @@ func main() {
 	categoryMastersHandler := handler.NewCategoryMastersHandler(categoryMastersService)
 	questionTemplateMastersHandler := handler.NewQuestionMastersHandler(questionTemplateMastersService)
 	projectQuestionsHandler := handler.NewProjectQuestionsHandler(projectQuestionsService)
+	questionAnswersHandler := handler.NewQuestionAnswersHandler(questionAnswersService)
+	correctResultsHandler := handler.NewCorrectResultsHandler(correctResultsService)
 
 	// 認証ミドルウェアの初期化
 	authMiddleware := middleware.NewAuthMiddleware(middleware.AuthConfig{
@@ -122,6 +134,7 @@ func main() {
 		api.GET("/projects", projectHandler.GetProjects)
 		api.GET("/projects/:id", projectHandler.GetProjectDetail)
 		api.POST("/projects/questions", projectQuestionsHandler.CreateProjectQuestions)
+		api.GET("/projects/questions", projectQuestionsHandler.GetProjectQuestions)
 
 		api.POST("/user-tags", userTagsHandler.CreateUserTags)
 		api.GET("/user-tags", userTagsHandler.GetUserTags)
@@ -133,6 +146,9 @@ func main() {
 
 		api.GET("/question-masters", questionTemplateMastersHandler.GetQuestionMasters)
 		api.GET("/question-masters/:id", questionTemplateMastersHandler.GetQuestionMasterByID)
+
+		api.POST("/question-answers", questionAnswersHandler.CreateQuestionAnswers)
+		api.POST("/correct-results", correctResultsHandler.CreateCorrectResult)
 	}
 
 	// サーバーの起動

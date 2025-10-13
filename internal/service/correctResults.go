@@ -1,0 +1,232 @@
+package service
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"log"
+	"os"
+	"strings"
+
+	"github.com/anthropics/anthropic-sdk-go"
+	"github.com/anthropics/anthropic-sdk-go/option"
+	"gorm.io/gorm"
+
+	"github.com/Takanpon2512/english-app/internal/model"
+	"github.com/Takanpon2512/english-app/internal/repository"
+)
+
+type CorrectResultsService interface {
+	CreateCorrectionResult(userID string, req *model.CreateCorrectionResultRequest) (*model.CreateCorrectionResultResponse, error)
+	GrandCorrectResult(userID string, req *model.GrandCorrectResultRequest) (*model.GrandCorrectResultResponse, error)
+}
+
+type correctResultsService struct {
+	db                          *gorm.DB
+	repo                        repository.CorrectResultsRepository
+	questionTemplateMastersRepo repository.QuestionTemplateMastersRepository
+	questionAnswersRepo         repository.QuestionAnswersRepository
+	claudeClient                anthropic.Client
+}
+
+func NewCorrectResultsService(
+	db *gorm.DB,
+	repo repository.CorrectResultsRepository,
+	questionTemplateMastersRepo repository.QuestionTemplateMastersRepository,
+	questionAnswersRepo repository.QuestionAnswersRepository,
+) CorrectResultsService {
+	apiKey := os.Getenv("CLAUDE_API_KEY")
+	if apiKey == "" {
+		log.Fatal("CLAUDE_API_KEY environment variable is not set")
+	}
+	claudeClient := anthropic.NewClient(
+		option.WithAPIKey(apiKey),
+	)
+	return &correctResultsService{
+		db:                          db,
+		repo:                        repo,
+		questionTemplateMastersRepo: questionTemplateMastersRepo,
+		questionAnswersRepo:         questionAnswersRepo,
+		claudeClient:                claudeClient,
+	}
+}
+
+// 添削結果のデータを作成
+func (s *correctResultsService) CreateCorrectionResult(userID string, req *model.CreateCorrectionResultRequest) (*model.CreateCorrectionResultResponse, error) {
+	return s.repo.CreateCorrectionResult(req)
+}
+
+// 添削結果のデータを更新
+func (s *correctResultsService) UpdateCorrectionResult(userID string, req *model.UpdateCorrectionResultRequest) (*model.UpdateCorrectionResultResponse, error) {
+	return s.repo.UpdateCorrectionResult(req)
+}
+
+// LLMで作成した添削結果のデータを取得し、反映
+func (s *correctResultsService) GrandCorrectResult(userID string, req *model.GrandCorrectResultRequest) (*model.GrandCorrectResultResponse, error) {
+	// 問題・解答データ取得のためのデータを取得
+	correctionResult, err := s.repo.GetCorrectionResultById(req.ID)
+	if err != nil {
+		return nil, fmt.Errorf("添削結果の取得に失敗しました: %w", err)
+	}
+
+	// 解答データを取得
+	userAnswer, err := s.questionAnswersRepo.GetQuestionAnswerById(correctionResult.QuestionAnswerID)
+	if err != nil {
+		return nil, fmt.Errorf("解答データの取得に失敗しました: %w", err)
+	}
+
+	// 質問テンプレートマスターを取得
+	questionTemplateMaster, err := s.questionTemplateMastersRepo.GetQuestionTemplateMasterLLMById(correctionResult.QuestionTemplateMasterID)
+	if err != nil {
+		return nil, fmt.Errorf("質問テンプレートマスターの取得に失敗しました: %w", err)
+	}
+
+	// LLMで添削を行うプロンプトを作成
+	prompt := fmt.Sprintf(`
+		あなたは英語の作文を採点する教師です。以下の条件で採点を行ってください：
+		
+		問題：
+		%s
+
+		日本語での説明：
+		%s
+
+		学習者の解答：
+		%s
+
+		出力要件：
+		- 次の厳密なJSONオブジェクト「のみ」を返してください。
+		- コードブロック( バッククォート3つ )や前後の説明文、余計な文字は一切出力しないでください。
+		- 値は有効なJSONとし、数値は整数で出力してください。
+		- キーは英語のまま使用してください。
+		
+		出力フォーマット（参考）：
+		{
+			"points": 採点結果（%d点満点の整数）, 
+			"correct_rate": 正答率（0-100の整数）, 
+			"example_correction": 模範解答の文字列, 
+			"advice": 改善のためのアドバイスの文字列
+		}
+	`, questionTemplateMaster.English, questionTemplateMaster.Japanese, userAnswer.UserAnswer, questionTemplateMaster.Points)
+
+	log.Println("prompt", prompt)
+
+	// Claudeに採点リクエストを送信（Anthropic Go SDK v1）
+	msg, err := s.claudeClient.Messages.New(
+		context.Background(),
+		anthropic.MessageNewParams{
+			Model:     anthropic.ModelClaude3_7Sonnet20250219,
+			MaxTokens: 1000,
+			Messages: []anthropic.MessageParam{
+				anthropic.NewUserMessage(
+					anthropic.NewTextBlock(prompt),
+				),
+			},
+		},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("Claudeによる採点に失敗しました: %w", err)
+	}
+
+	// レスポンスをパース（Contentのテキスト結合 → JSONとして解釈）
+	var output string
+	for _, block := range msg.Content {
+		if block.Type == "text" {
+			output += block.Text
+		}
+	}
+	// Claudeの出力にコードフェンスや説明が混ざる場合があるため、
+	// 最初の完全なJSONオブジェクトのみを抽出してからUnmarshalする
+	jsonStr, err := extractFirstJSONObject(output)
+	if err != nil {
+		return nil, fmt.Errorf("ClaudeのレスポンスからJSON抽出に失敗しました: %w", err)
+	}
+	var llmResponse struct {
+		Points            int    `json:"points"`
+		CorrectRate       int    `json:"correct_rate"`
+		ExampleCorrection string `json:"example_correction"`
+		Advice            string `json:"advice"`
+	}
+	if err := json.Unmarshal([]byte(jsonStr), &llmResponse); err != nil {
+		return nil, fmt.Errorf("Claudeのレスポンスのパースに失敗しました: %w", err)
+	}
+
+	s.repo.UpdateCorrectionResult(&model.UpdateCorrectionResultRequest{
+		ID:                       correctionResult.ID,
+		GetPoints:                llmResponse.Points,
+		ExampleCorrection:        llmResponse.ExampleCorrection,
+		CorrectRate:              llmResponse.CorrectRate,
+		Advice:                   llmResponse.Advice,
+		Status:                   "COMPLETED",
+	})
+
+	return &model.GrandCorrectResultResponse{
+		ID:                       correctionResult.ID,
+		QuestionAnswerID:         correctionResult.QuestionAnswerID,
+		QuestionTemplateMasterID: correctionResult.QuestionTemplateMasterID,
+		GetPoints:                llmResponse.Points,
+		ExampleCorrection:        llmResponse.ExampleCorrection,
+		CorrectRate:              llmResponse.CorrectRate,
+		Advice:                   llmResponse.Advice,
+		Status:                   "COMPLETED",
+	}, nil
+}
+
+// Claudeの出力テキストから最初の完全なJSONオブジェクトを抽出する
+// - コードブロック( ```json ... ``` )が含まれていても取り除いて抽出する
+func extractFirstJSONObject(input string) (string, error) {
+	trimmed := strings.TrimSpace(input)
+	// コードフェンスがある場合は除去
+	if strings.HasPrefix(trimmed, "```") {
+		// 先頭のフェンスとオプションの言語指定を取り除く
+		trimmed = strings.TrimPrefix(trimmed, "```json")
+		trimmed = strings.TrimPrefix(trimmed, "```JSON")
+		trimmed = strings.TrimPrefix(trimmed, "```")
+		trimmed = strings.TrimSpace(trimmed)
+		// 末尾のフェンスを取り除く
+		if idx := strings.LastIndex(trimmed, "```"); idx != -1 {
+			trimmed = trimmed[:idx]
+		}
+	}
+
+	// 最初の完全なJSONオブジェクトを括弧のネストで検出
+	inString := false
+	escape := false
+	depth := 0
+	start := -1
+	for i, r := range trimmed {
+		if inString {
+			if escape {
+				escape = false
+				continue
+			}
+			if r == '\\' {
+				escape = true
+				continue
+			}
+			if r == '"' {
+				inString = false
+			}
+			continue
+		}
+		if r == '"' {
+			inString = true
+			continue
+		}
+		switch r {
+		case '{':
+			if depth == 0 {
+				start = i
+			}
+			depth++
+		case '}':
+			if depth > 0 {
+				depth--
+				if depth == 0 && start != -1 {
+					return trimmed[start : i+1], nil
+				}
+			}
+		}
+	}
+	return "", fmt.Errorf("valid JSON object not found in LLM output")
+}

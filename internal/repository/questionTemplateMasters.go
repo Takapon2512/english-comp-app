@@ -10,6 +10,7 @@ import (
 type QuestionTemplateMastersRepository interface {
 	GetQuestionTemplateMasters(req *model.GetQuestionTemplateMastersSearchRequest) (*model.GetQuestionTemplateMastersSearchResponse, error)
 	GetQuestionTemplateMasterByID(id string) (*model.QuestionTemplateMastersSummary, error)
+	GetQuestionTemplateMasterLLMById(id string) (*model.GetQuestionTemplateMastersLLMResponse, error)
 }
 
 type questionTemplateMastersRepository struct {
@@ -132,5 +133,25 @@ func (r *questionTemplateMastersRepository) GetCategoryInfo(categoryID string) (
 	return &model.CategoryInfo{
 		ID:   categoryInfo.ID,
 		Name: categoryInfo.Name,
+	}, nil
+}
+
+func (r *questionTemplateMastersRepository) GetQuestionTemplateMasterLLMById(id string) (*model.GetQuestionTemplateMastersLLMResponse, error) {
+	var questionTemplateMaster model.QuestionTemplateMasters
+
+	if err := r.db.Model(&model.QuestionTemplateMasters{}).Where("id = ?", id).First(&questionTemplateMaster).Error; err != nil {
+		return nil, fmt.Errorf("質問テンプレートマスターの取得に失敗しました: %w", err)
+	}
+
+	return &model.GetQuestionTemplateMastersLLMResponse{
+		ID:            questionTemplateMaster.ID,
+		CategoryID:    questionTemplateMaster.CategoryID,
+		QuestionType:  questionTemplateMaster.QuestionType,
+		English:       questionTemplateMaster.English,
+		Japanese:      questionTemplateMaster.Japanese,
+		Status:        questionTemplateMaster.Status,
+		Level:         questionTemplateMaster.Level,
+		EstimatedTime: questionTemplateMaster.EstimatedTime,
+		Points:        questionTemplateMaster.Points,
 	}, nil
 }

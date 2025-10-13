@@ -11,6 +11,7 @@ import (
 
 type ProjectQuestionsRepository interface {
 	CreateProjectQuestions(req *model.CreateProjectQuestionsRequest) (*model.CreateProjectQuestionsResponse, error)
+	GetProjectQuestions(req *model.GetProjectQuestionsRequest) (*model.GetProjectQuestionsResponse, error)
 }
 
 type projectQuestionsRepository struct {
@@ -54,5 +55,34 @@ func (r *projectQuestionsRepository) CreateProjectQuestions(req *model.CreatePro
 
 	return &model.CreateProjectQuestionsResponse{
 		ProjectQuestions: projectQuestionsSummary,
+	}, nil
+}
+
+func (r *projectQuestionsRepository) GetProjectQuestions(req *model.GetProjectQuestionsRequest) (*model.GetProjectQuestionsResponse, error) {
+	// プロジェクトに紐づく質問テンプレートIDを取得
+	var projectQuestions []model.ProjectQuestions
+	if err := r.db.Where("project_id = ? AND deleted_at IS NULL", req.ProjectID).Find(&projectQuestions).Error; err != nil {
+		return nil, fmt.Errorf("プロジェクト質問の取得に失敗しました: %w", err)
+	}
+
+	// 質問テンプレートIDのリストを作成
+	var questionTemplateIDs []string
+	for _, pq := range projectQuestions {
+		questionTemplateIDs = append(questionTemplateIDs, pq.QuestionTemplateMasterID)
+	}
+
+	// 質問テンプレートの詳細情報を取得
+	var questions []model.QuestionTemplateMastersSummary
+	if len(questionTemplateIDs) > 0 {
+		if err := r.db.Table("question_template_masters").
+			Select("id, category_id, question_type, english, japanese, status, level, estimated_time, points").
+			Where("id IN ? AND deleted_at IS NULL", questionTemplateIDs).
+			Find(&questions).Error; err != nil {
+			return nil, fmt.Errorf("質問テンプレートの取得に失敗しました: %w", err)
+		}
+	}
+
+	return &model.GetProjectQuestionsResponse{
+		Questions: questions,
 	}, nil
 }

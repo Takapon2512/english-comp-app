@@ -42,6 +42,18 @@ type QuestionTemplateMastersSummary struct {
 	Category CategoryInfo `json:"category"`
 }
 
+type GetQuestionTemplateMastersLLMResponse struct {
+	ID        string `json:"id"`
+	CategoryID string `json:"category_id"`
+	QuestionType string `json:"question_type"`
+	English    string `json:"english"`
+	Japanese   string `json:"japanese"`
+	Status     string `json:"status"`
+	Level      string `json:"level"`
+	EstimatedTime int `json:"estimated_time"`
+	Points int `json:"points"`
+}
+
 type GetQuestionTemplateMastersSearchRequest struct {
 	CategoryID string `json:"category_id"`
 	QuestionType string `json:"question_type"`

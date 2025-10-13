@@ -1,0 +1,5 @@
+ALTER TABLE correction_results 
+DROP FOREIGN KEY fk_correction_results_question_answer_id;
+
+ALTER TABLE correction_results 
+DROP FOREIGN KEY fk_correction_results_question_template_master_id;

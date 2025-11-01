@@ -30,20 +30,22 @@ func (h *QuestionMastersHandler) GetQuestionMasters(c *gin.Context) {
 		return
 	}
 
-	// クエリパラメータを直接取得
-	perPage := c.DefaultQuery("per_page", "10")
-	page := c.DefaultQuery("page", "1")
-
+	// JSONボディからリクエストを取得
 	var req model.GetQuestionTemplateMastersSearchRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "無効なリクエストです"})
+		return
+	}
 
-	if perPage != "" {
-		if n, err := strconv.Atoi(perPage); err == nil && n > 0 {
+	// クエリパラメータからページネーション情報を取得（優先）
+	if perPageStr := c.Query("per_page"); perPageStr != "" {
+		if n, err := strconv.Atoi(perPageStr); err == nil && n > 0 {
 			req.PerPage = n
 		}
 	}
 
-	if page != "" {
-		if n, err := strconv.Atoi(page); err == nil && n > 0 {
+	if pageStr := c.Query("page"); pageStr != "" {
+		if n, err := strconv.Atoi(pageStr); err == nil && n > 0 {
 			req.Page = n
 		}
 	}
@@ -82,7 +84,7 @@ func (h *QuestionMastersHandler) GetQuestionMasterByID(c *gin.Context) {
 	}
 
 	response, err := h.questionMastersService.GetQuestionTemplateMasterByID(userID.(string), id)
-	
+
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

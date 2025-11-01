@@ -13,6 +13,9 @@ type QuestionAnswersRepository interface {
 	CreateQuestionAnswers(userID string, req *model.CreateQuestionAnswersRequest) (*model.CreateQuestionAnswersResponse, error)
 	GetQuestionNoCorrectionAnswers(req *model.GetQuestionAnswersRequest) (*model.GetQuestionAnswersResponse, error)
 	GetQuestionAnswerById(id string) (*model.QuestionAnswers, error)
+	GetQuestionAnswersByProjectID(projectID string) (*model.GetQuestionAnswersResponse, error)
+	GetQuestionAnswersByProjectIDAndStatus(projectID, status string) ([]model.QuestionAnswers, error)
+	UpdateQuestionAnswer(tx *gorm.DB, questionAnswer *model.QuestionAnswers) error
 }
 
 type questionAnswersRepository struct {
@@ -31,6 +34,8 @@ func (r *questionAnswersRepository) CreateQuestionAnswers(userID string, req *mo
 		ProjectID:                req.ProjectID,
 		QuestionTemplateMasterID: req.QuestionTemplateMasterID,
 		UserAnswer:               req.UserAnswer,
+		ChallengeCount:           req.ChallengeCount,
+		Status:                   "PROCESSING",
 		CreatedAt:                now,
 		UpdatedAt:                now,
 		CreatedBy:                userID,
@@ -52,7 +57,7 @@ func (r *questionAnswersRepository) CreateQuestionAnswers(userID string, req *mo
 		ProjectID:                questionAnswer.ProjectID,
 		QuestionTemplateMasterID: questionAnswer.QuestionTemplateMasterID,
 		UserAnswer:               questionAnswer.UserAnswer,
-		IsCorrection:             questionAnswer.IsCorrection,
+		ChallengeCount:           questionAnswer.ChallengeCount,
 	}, nil
 }
 
@@ -74,4 +79,37 @@ func (r *questionAnswersRepository) GetQuestionAnswerById(id string) (*model.Que
 	}
 
 	return &questionAnswer, nil
+}
+
+func (r *questionAnswersRepository) GetQuestionAnswersByProjectID(projectID string) (*model.GetQuestionAnswersResponse, error) {
+	var questionAnswers []model.QuestionAnswers
+	if err := r.db.Where("project_id = ?", projectID).Find(&questionAnswers).Error; err != nil {
+		return nil, fmt.Errorf("回答データの取得に失敗しました: %w", err)
+	}
+
+	return &model.GetQuestionAnswersResponse{
+		QuestionAnswers: questionAnswers,
+	}, nil
+}
+
+// GetQuestionAnswersByProjectIDAndStatus プロジェクトIDとステータスで回答データを取得
+func (r *questionAnswersRepository) GetQuestionAnswersByProjectIDAndStatus(projectID, status string) ([]model.QuestionAnswers, error) {
+	var questionAnswers []model.QuestionAnswers
+	if err := r.db.Where("project_id = ? AND status = ?", projectID, status).Find(&questionAnswers).Error; err != nil {
+		return nil, fmt.Errorf("回答データの取得に失敗しました: %w", err)
+	}
+	return questionAnswers, nil
+}
+
+// UpdateQuestionAnswer 回答データを更新（トランザクション対応）
+func (r *questionAnswersRepository) UpdateQuestionAnswer(tx *gorm.DB, questionAnswer *model.QuestionAnswers) error {
+	db := r.db
+	if tx != nil {
+		db = tx
+	}
+
+	if err := db.Save(questionAnswer).Error; err != nil {
+		return fmt.Errorf("回答データの更新に失敗しました: %w", err)
+	}
+	return nil
 }

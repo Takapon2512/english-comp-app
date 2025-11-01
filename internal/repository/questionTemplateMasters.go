@@ -2,6 +2,7 @@ package repository
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/Takanpon2512/english-app/internal/model"
 	"gorm.io/gorm"
@@ -26,6 +27,26 @@ func (r *questionTemplateMastersRepository) GetQuestionTemplateMasters(req *mode
 	var total int64
 
 	query := r.db.Model(&model.QuestionTemplateMasters{}).Where("status = ?", "ACTIVE")
+
+	// プロジェクトにすでに紐づいている質問テンプレート以外の質問テンプレートを取得
+	if req.ProjectID != "" {
+		// 既存のプロジェクト質問のIDを取得（削除されていないもののみ）
+		var existingQuestionIDs []string
+		if err := r.db.Model(&model.ProjectQuestions{}).
+			Select("question_template_master_id").
+			Where("project_id = ?", req.ProjectID).
+			Pluck("question_template_master_id", &existingQuestionIDs).Error; err != nil {
+			return nil, fmt.Errorf("既存の質問IDの取得に失敗しました: %w", err)
+		}
+
+		// デバッグログ
+		log.Printf("ProjectID: %s, 既存の質問ID数: %d, IDs: %v", req.ProjectID, len(existingQuestionIDs), existingQuestionIDs)
+
+		// 既存の質問IDがある場合のみ除外条件を追加
+		if len(existingQuestionIDs) > 0 {
+			query = query.Where("id NOT IN ?", existingQuestionIDs)
+		}
+	}
 
 	if req.CategoryID != "" {
 		query = query.Where("category_id = ?", req.CategoryID)

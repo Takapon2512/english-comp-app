@@ -55,6 +55,7 @@ type GetQuestionTemplateMastersLLMResponse struct {
 }
 
 type GetQuestionTemplateMastersSearchRequest struct {
+	ProjectID string `json:"project_id"`
 	CategoryID string `json:"category_id"`
 	QuestionType string `json:"question_type"`
 	Status     string `json:"status"`

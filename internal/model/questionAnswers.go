@@ -12,7 +12,8 @@ type QuestionAnswers struct {
 	ProjectID                string         `json:"project_id" gorm:"type:char(36);not null"`
 	QuestionTemplateMasterID string         `json:"question_template_master_id" gorm:"type:char(36);not null"`
 	UserAnswer               string         `json:"user_answer" gorm:"type:text"`
-	IsCorrection             bool           `json:"is_correction" gorm:"type:boolean;not null;default:false"`
+	ChallengeCount           int            `json:"challenge_count" gorm:"type:int;not null;default:1"`
+	Status                   string         `json:"status" gorm:"type:varchar(20);not null;default:'PROCESSING'"`
 	CreatedAt                time.Time      `json:"created_at" gorm:"not null"`
 	UpdatedAt                time.Time      `json:"updated_at" gorm:"not null"`
 	DeletedAt                gorm.DeletedAt `json:"deleted_at" gorm:"index"`
@@ -22,17 +23,18 @@ type QuestionAnswers struct {
 }
 
 type QuestionAnswersSummary struct {
-	ID string `json:"id"`
-	UserID string `json:"user_id"`
-	ProjectID string `json:"project_id"`
+	ID                       string `json:"id"`
+	UserID                   string `json:"user_id"`
+	ProjectID                string `json:"project_id"`
 	QuestionTemplateMasterID string `json:"question_template_master_id"`
-	UserAnswer string `json:"user_answer"`
+	UserAnswer               string `json:"user_answer"`
 }
 
 type CreateQuestionAnswersRequest struct {
 	ProjectID                string `json:"project_id" binding:"required"`
 	QuestionTemplateMasterID string `json:"question_template_master_id" binding:"required"`
 	UserAnswer               string `json:"user_answer"`
+	ChallengeCount           int    `json:"challenge_count" binding:"required"`
 }
 
 type CreateQuestionAnswersResponse struct {
@@ -41,7 +43,7 @@ type CreateQuestionAnswersResponse struct {
 	ProjectID                string `json:"project_id"`
 	QuestionTemplateMasterID string `json:"question_template_master_id"`
 	UserAnswer               string `json:"user_answer"`
-	IsCorrection             bool   `json:"is_correction"`
+	ChallengeCount           int    `json:"challenge_count"`
 }
 
 type GetQuestionAnswersRequest struct {
@@ -49,5 +51,9 @@ type GetQuestionAnswersRequest struct {
 }
 
 type GetQuestionAnswersResponse struct {
+	QuestionAnswers []QuestionAnswers `json:"question_answers"`
+}
+
+type UpdateQuestionAnswersFinishResponse struct {
 	QuestionAnswers []QuestionAnswers `json:"question_answers"`
 }

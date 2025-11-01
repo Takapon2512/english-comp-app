@@ -81,13 +81,13 @@ Table user_tags {
 Table question_template_masters {
   id char(36) [pk]
   category_id char(36) [not null]
-  question_type verchar(10) [not null]
+  question_type varchar(10) [not null]
   english text [not null]
   japanese text [not null]
   status varchar(10) [not null]
   level varchar(10) [not null]
-  estimated_time Int [not null]
-  points Int [not null]
+  estimated_time int [not null]
+  points int [not null]
   created_by char(36) [not null]
   updated_by char(36) [not null]
   deleted_by char(36) [null]
@@ -125,7 +125,7 @@ Table question_answers {
   project_id char(36) [not null]
   question_template_master_id char(36) [not null]
   user_answer text [null]
-  is_correction bool [not null, default: false]
+  challenge_count int [not null, default: 1] 
   created_by char(36) [not null]
   updated_by char(36) [not null]
   deleted_by char(36) [null]
@@ -155,13 +155,13 @@ Ref: users.id < refresh_tokens.user_id [delete: restrict, update: cascade]
 Ref: users.id < password_reset_tokens.user_id [delete: restrict, update: cascade]
 Ref: users.id < projects.user_id [delete: restrict, update: cascade]
 Ref: users.id < user_tags.user_id [delete: cascade, update: cascade]
-Ref: users.id < question_answers.user_id
+Ref: users.id < question_answers.user_id [delete: cascade, update: cascade]
 Ref: projects.id < project_tags.project_id [delete: cascade, update: cascade]
-Ref: projects.id < question_answers.project_id
+Ref: projects.id < question_answers.project_id [delete: cascade, update: cascade]
 Ref: user_tags.id < project_tags.user_tags_id [delete: cascade, update: cascade]
 Ref: category_masters.id < question_template_masters.category_id [delete: cascade, update: cascade]
-Ref: project_questions.project_id < projects.id
-Ref: project_questions.question_template_master_id < question_template_masters.id
-Ref: question_template_masters.id < question_answers.question_template_master_id
-Ref: question_template_masters.id < correction_results.question_template_master_id
-Ref: question_answers.id < correction_results.question_answer_id
+Ref: projects.id < project_questions.project_id [delete: cascade, update: cascade]
+Ref: question_template_masters.id < project_questions.question_template_master_id [delete: cascade, update: cascade]
+Ref: question_template_masters.id < question_answers.question_template_master_id [delete: cascade, update: cascade]
+Ref: question_template_masters.id < correction_results.question_template_master_id [delete: cascade, update: cascade]
+Ref: question_answers.id < correction_results.question_answer_id [delete: cascade, update: cascade]

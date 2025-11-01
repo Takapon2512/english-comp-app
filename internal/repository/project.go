@@ -42,6 +42,11 @@ func (r *projectRepository) GetProjects(req *model.GetProjectsRequest) (*model.G
 			Joins("JOIN user_tags ON project_tags.user_tags_id = user_tags.id").
 			Where("user_tags.name = ?", req.Tag)
 	}
+	// プロジェクトに紐づく質問数を取得
+	query = query.Joins("LEFT JOIN project_questions ON projects.id = project_questions.project_id").
+		Select("projects.*, COUNT(project_questions.id) as total_questions").
+		Group("projects.id").
+		Where("project_questions.deleted_at IS NULL")
 
 	// タグ情報を事前読み込み
 	query = query.Preload("Tags").Preload("Tags.UserTag")
@@ -62,6 +67,11 @@ func (r *projectRepository) GetProjects(req *model.GetProjectsRequest) (*model.G
 		return nil, fmt.Errorf("プロジェクト一覧の取得に失敗しました: %w", err)
 	}
 
+	// プロジェクトに紐づく質問数を取得
+	for i, project := range projects {
+		projects[i].TotalQuestions = int(project.TotalQuestions)
+	}
+
 	return &model.GetProjectsResponse{
 		Projects: projects,
 		Total:    int(total),
@@ -74,7 +84,13 @@ func (r *projectRepository) GetProjects(req *model.GetProjectsRequest) (*model.G
 func (r *projectRepository) GetProjectDetail(req *model.GetProjectDetailRequest) (*model.GetProjectDetailResponse, error) {
 	var project model.Project
 
-	query := r.db.Model(&model.Project{}).Where("id = ?", req.ID)
+	query := r.db.Model(&model.Project{}).Where("projects.id = ?", req.ID)
+
+	// プロジェクトに紐づく質問数を取得
+	query = query.Joins("LEFT JOIN project_questions ON projects.id = project_questions.project_id").
+		Select("projects.*, COUNT(project_questions.id) as total_questions").
+		Group("projects.id").
+		Where("project_questions.deleted_at IS NULL")
 
 	if err := query.Preload("Tags").Preload("Tags.UserTag").First(&project).Error; err != nil {
 		return nil, fmt.Errorf("プロジェクトの取得に失敗しました: %w", err)

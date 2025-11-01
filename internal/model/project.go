@@ -17,6 +17,7 @@ type Project struct {
 	DeletedAt   gorm.DeletedAt `json:"deleted_at" gorm:"index"`
 	DeletedBy   string         `json:"deleted_by" gorm:"type:char(36)"`
 	User        *User          `json:"-" gorm:"foreignKey:UserID"`
+	TotalQuestions int `json:"total_questions" gorm:"not null"`
 	CreatedBy   string         `json:"created_by" gorm:"type:char(36);not null"`
 	UpdatedBy   string         `json:"updated_by" gorm:"type:char(36);not null"`
 

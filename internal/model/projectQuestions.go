@@ -36,10 +36,13 @@ type CreateProjectQuestionsResponse struct {
 }
 
 type GetProjectQuestionsRequest struct {
-	UserID    string `json:"user_id"`
-	ProjectID string `json:"project_id" binding:"required"`
+	UserID    			string 		`json:"user_id"`
+	ProjectID 			string 		`json:"project_id" binding:"required"`
+	ChallengeCount 		int 		`json:"challenge_count"`
 }
 
 type GetProjectQuestionsResponse struct {
-	Questions []QuestionTemplateMastersSummary `json:"questions"`
+	Questions   []QuestionTemplateMastersSummary `json:"questions"`
+	Total       int                              `json:"total"`
+	AnswerCount int                              `json:"answer_count"`
 }

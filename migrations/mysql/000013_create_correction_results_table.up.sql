@@ -7,6 +7,7 @@ CREATE TABLE correction_results (
     correct_rate INT NULL,
     advice TEXT NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'PROCESSING',
+    challenge_count INT NOT NULL DEFAULT 1,
     created_by CHAR(36) NOT NULL,
     updated_by CHAR(36) NOT NULL,
     deleted_by CHAR(36) NULL,

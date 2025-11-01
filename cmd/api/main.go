@@ -133,8 +133,8 @@ func main() {
 		api.POST("/projects", projectHandler.CreateProject)
 		api.GET("/projects", projectHandler.GetProjects)
 		api.GET("/projects/:id", projectHandler.GetProjectDetail)
-		api.POST("/projects/questions", projectQuestionsHandler.CreateProjectQuestions)
-		api.GET("/projects/questions", projectQuestionsHandler.GetProjectQuestions)
+		api.POST("/projects/create-questions", projectQuestionsHandler.CreateProjectQuestions)
+		api.POST("/projects/questions", projectQuestionsHandler.GetProjectQuestions)
 
 		api.POST("/user-tags", userTagsHandler.CreateUserTags)
 		api.GET("/user-tags", userTagsHandler.GetUserTags)
@@ -144,10 +144,13 @@ func main() {
 		api.GET("/category-masters", categoryMastersHandler.GetCategoryMasters)
 		// api.GET("/category-master", categoryMastersHandler.GetCategoryMastersByID)
 
-		api.GET("/question-masters", questionTemplateMastersHandler.GetQuestionMasters)
+		api.POST("/question-masters", questionTemplateMastersHandler.GetQuestionMasters)
 		api.GET("/question-masters/:id", questionTemplateMastersHandler.GetQuestionMasterByID)
 
 		api.POST("/question-answers", questionAnswersHandler.CreateQuestionAnswers)
+		api.GET("/question-answers/:project_id", questionAnswersHandler.GetQuestionAnswersByProjectID)
+		api.POST("/question-answers/finish/:project_id", questionAnswersHandler.UpdateQuestionAnswersFinish)
+
 		api.POST("/correct-results", correctResultsHandler.CreateCorrectResult)
 	}
 

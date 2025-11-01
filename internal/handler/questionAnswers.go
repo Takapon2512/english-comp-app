@@ -44,3 +44,41 @@ func (h *QuestionAnswersHandler) CreateQuestionAnswers(c *gin.Context) {
 	
 	c.JSON(http.StatusCreated, response)
 }
+
+// GetQuestionAnswersByProjectID プロジェクトIDに紐づく質問回答を取得するハンドラー
+func (h *QuestionAnswersHandler) GetQuestionAnswersByProjectID(c *gin.Context) {
+	// コンテキストからユーザーIDを取得
+	_, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "認証が必要です"})
+		return
+	}
+
+	projectID := c.Param("project_id")
+	response, err := h.questionAnswersService.GetQuestionAnswersByProjectID(projectID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, response)
+}
+
+// UpdateQuestionAnswersFinish プロジェクトIDに紐づく質問回答を更新するハンドラー
+func (h *QuestionAnswersHandler) UpdateQuestionAnswersFinish(c *gin.Context) {
+	// コンテキストからユーザーIDを取得
+	_, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "認証が必要です"})
+		return
+	}
+
+	projectID := c.Param("project_id")
+	response, err := h.questionAnswersService.UpdateQuestionAnswersFinish(projectID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, response)
+}

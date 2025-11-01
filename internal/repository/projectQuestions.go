@@ -82,7 +82,19 @@ func (r *projectQuestionsRepository) GetProjectQuestions(req *model.GetProjectQu
 		}
 	}
 
+	// 現在の回答数を取得
+	var answerCount int64
+	if req.ChallengeCount > 0 {
+		if err := r.db.Table("question_answers").
+			Where("project_id = ? AND deleted_at IS NULL AND challenge_count = ?", req.ProjectID, req.ChallengeCount).
+			Count(&answerCount).Error; err != nil {
+			return nil, fmt.Errorf("回答数の取得に失敗しました: %w", err)
+		}
+	}
+
 	return &model.GetProjectQuestionsResponse{
 		Questions: questions,
+		Total:     len(projectQuestions),
+		AnswerCount: int(answerCount),
 	}, nil
 }

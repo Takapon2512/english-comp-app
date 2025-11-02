@@ -82,3 +82,22 @@ func (h *QuestionAnswersHandler) UpdateQuestionAnswersFinish(c *gin.Context) {
 
 	c.JSON(http.StatusOK, response)
 }
+
+// GetProjectQuestionToAnswer プロジェクトに紐づく問題の中から1題ランダムに取得するハンドラー
+func (h *QuestionAnswersHandler) GetProjectQuestionToAnswer(c *gin.Context) {
+	// コンテキストからユーザーIDを取得
+	_, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "認証が必要です"})
+		return
+	}
+
+	projectID := c.Param("project_id")
+	response, err := h.questionAnswersService.GetProjectQuestionToAnswer(projectID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, response)
+}

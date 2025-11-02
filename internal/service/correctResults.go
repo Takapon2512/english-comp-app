@@ -53,6 +53,14 @@ func NewCorrectResultsService(
 
 // 添削結果のデータを作成
 func (s *correctResultsService) CreateCorrectionResult(userID string, req *model.CreateCorrectionResultRequest) (*model.CreateCorrectionResultResponse, error) {
+	// 解答データ取得
+	userAnswer, err := s.questionAnswersRepo.GetQuestionAnswerById(req.QuestionAnswerID)
+	if err != nil {
+		return nil, fmt.Errorf("解答データの取得に失敗しました: %w", err)
+	}
+
+	req.ChallengeCount = userAnswer.ChallengeCount
+
 	return s.repo.CreateCorrectionResult(req)
 }
 
@@ -169,6 +177,7 @@ func (s *correctResultsService) GrandCorrectResult(userID string, req *model.Gra
 		CorrectRate:              llmResponse.CorrectRate,
 		Advice:                   llmResponse.Advice,
 		Status:                   "COMPLETED",
+		ChallengeCount:           correctionResult.ChallengeCount,
 	}, nil
 }
 

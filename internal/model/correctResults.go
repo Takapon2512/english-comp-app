@@ -15,6 +15,7 @@ type CorrectionResults struct {
 	CorrectRate 				int `json:"correct_rate" gorm:"type:int;null"`
 	Advice 						string `json:"advice" gorm:"type:text;null"`
 	Status 						string `json:"status" gorm:"type:varchar(20);not null;default:PROCESSING"`
+	ChallengeCount 				int `json:"challenge_count" gorm:"type:int;not null;default:1"`
 	CreatedBy 					string `json:"created_by" gorm:"type:char(36);not null"`
 	UpdatedBy 					string `json:"updated_by" gorm:"type:char(36);not null"`
 	DeletedBy 					string `json:"deleted_by" gorm:"type:char(36);null"`
@@ -32,6 +33,7 @@ type CorrectionResultsSummary struct {
 	CorrectRate 				int `json:"correct_rate"`
 	Advice 						string `json:"advice"`
 	Status 						string `json:"status"`
+	ChallengeCount 				int `json:"challenge_count"`
 	QuestionAnswer 				QuestionAnswersSummary `json:"question_answer"`
 	QuestionTemplateMaster 		QuestionTemplateMastersSummary `json:"question_template_master"`
 }
@@ -44,6 +46,7 @@ type CreateCorrectionResultRequest struct {
 	CorrectRate int `json:"correct_rate"`
 	Advice string `json:"advice"`
 	Status string `json:"status"`
+	ChallengeCount int `json:"challenge_count"`
 }
 
 type UpdateCorrectionResultRequest struct {
@@ -64,6 +67,7 @@ type CreateCorrectionResultResponse struct {
 	CorrectRate int `json:"correct_rate"`
 	Advice string `json:"advice"`
 	Status string `json:"status"`
+	ChallengeCount int `json:"challenge_count"`
 }
 
 type UpdateCorrectionResultResponse struct {
@@ -75,6 +79,7 @@ type UpdateCorrectionResultResponse struct {
 	CorrectRate int `json:"correct_rate"`
 	Advice string `json:"advice"`
 	Status string `json:"status"`
+	ChallengeCount int `json:"challenge_count"`
 }
 
 type GrandCorrectResultRequest struct {
@@ -90,4 +95,5 @@ type GrandCorrectResultResponse struct {
 	CorrectRate int `json:"correct_rate"`
 	Advice string `json:"advice"`
 	Status string `json:"status"`
+	ChallengeCount int `json:"challenge_count"`
 }

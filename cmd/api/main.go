@@ -89,7 +89,7 @@ func main() {
 	categoryMastersService := service.NewCategoryMastersService(db, categoryMastersRepo)
 	questionTemplateMastersService := service.NewQuestionTemplateMastersService(db, questionTemplateMastersRepo)
 	projectQuestionsService := service.NewProjectQuestionsService(db, projectQuestionsRepo, questionTemplateMastersRepo)
-	questionAnswersService := service.NewQuestionAnswersService(db, questionAnswersRepo)
+	questionAnswersService := service.NewQuestionAnswersService(db, questionAnswersRepo, projectQuestionsRepo, questionTemplateMastersRepo)
 	correctResultsService := service.NewCorrectResultsService(db, correctResultsRepo, questionTemplateMastersRepo, questionAnswersRepo)
 
 	// ハンドラーの初期化
@@ -149,7 +149,8 @@ func main() {
 
 		api.POST("/question-answers", questionAnswersHandler.CreateQuestionAnswers)
 		api.GET("/question-answers/:project_id", questionAnswersHandler.GetQuestionAnswersByProjectID)
-		api.POST("/question-answers/finish/:project_id", questionAnswersHandler.UpdateQuestionAnswersFinish)
+		api.PUT("/question-answers/finish/:project_id", questionAnswersHandler.UpdateQuestionAnswersFinish)
+		api.POST("/question-answers/question-to-answer/:project_id", questionAnswersHandler.GetProjectQuestionToAnswer)
 
 		api.POST("/correct-results", correctResultsHandler.CreateCorrectResult)
 	}

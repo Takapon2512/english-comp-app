@@ -25,6 +25,8 @@ func NewCorrectResultsRepository(db *gorm.DB) CorrectResultsRepository {
 }
 
 func (r *correctResultsRepository) CreateCorrectionResult(req *model.CreateCorrectionResultRequest) (*model.CreateCorrectionResultResponse, error) {
+	// 
+	
 	now := time.Now()
 	correctionResult := &model.CorrectionResults{
 		ID:                       uuid.New().String(),
@@ -35,6 +37,7 @@ func (r *correctResultsRepository) CreateCorrectionResult(req *model.CreateCorre
 		CorrectRate:              req.CorrectRate,
 		Advice:                   req.Advice,
 		Status:                   req.Status,
+		ChallengeCount:           req.ChallengeCount,
 		CreatedAt:                now,
 		UpdatedAt:                now,
 		CreatedBy:                "system",
@@ -54,6 +57,7 @@ func (r *correctResultsRepository) CreateCorrectionResult(req *model.CreateCorre
 		CorrectRate:              correctionResult.CorrectRate,
 		Advice:                   correctionResult.Advice,
 		Status:                   correctionResult.Status,
+		ChallengeCount:           correctionResult.ChallengeCount,
 	}, nil
 }
 
@@ -83,6 +87,7 @@ func (r *correctResultsRepository) UpdateCorrectionResult(req *model.UpdateCorre
 		CorrectRate:              correctionResult.CorrectRate,
 		Advice:                   correctionResult.Advice,
 		Status:                   correctionResult.Status,
+		ChallengeCount:           correctionResult.ChallengeCount,
 	}, nil
 }
 

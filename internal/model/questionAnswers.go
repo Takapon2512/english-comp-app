@@ -34,7 +34,6 @@ type CreateQuestionAnswersRequest struct {
 	ProjectID                string `json:"project_id" binding:"required"`
 	QuestionTemplateMasterID string `json:"question_template_master_id" binding:"required"`
 	UserAnswer               string `json:"user_answer"`
-	ChallengeCount           int    `json:"challenge_count" binding:"required"`
 }
 
 type CreateQuestionAnswersResponse struct {
@@ -56,4 +55,9 @@ type GetQuestionAnswersResponse struct {
 
 type UpdateQuestionAnswersFinishResponse struct {
 	QuestionAnswers []QuestionAnswers `json:"question_answers"`
+}
+
+type GetProjectQuestionToAnswerResponse struct {
+	Question QuestionTemplateMastersSummary `json:"question"`
+	NowQuestionNumber int `json:"now_question_number"`
 }

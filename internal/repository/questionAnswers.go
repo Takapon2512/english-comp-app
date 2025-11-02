@@ -2,6 +2,7 @@ package repository
 
 import (
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/Takanpon2512/english-app/internal/model"
@@ -11,7 +12,6 @@ import (
 
 type QuestionAnswersRepository interface {
 	CreateQuestionAnswers(userID string, req *model.CreateQuestionAnswersRequest) (*model.CreateQuestionAnswersResponse, error)
-	GetQuestionNoCorrectionAnswers(req *model.GetQuestionAnswersRequest) (*model.GetQuestionAnswersResponse, error)
 	GetQuestionAnswerById(id string) (*model.QuestionAnswers, error)
 	GetQuestionAnswersByProjectID(projectID string) (*model.GetQuestionAnswersResponse, error)
 	GetQuestionAnswersByProjectIDAndStatus(projectID, status string) ([]model.QuestionAnswers, error)
@@ -27,6 +27,39 @@ func NewQuestionAnswersRepository(db *gorm.DB) QuestionAnswersRepository {
 }
 
 func (r *questionAnswersRepository) CreateQuestionAnswers(userID string, req *model.CreateQuestionAnswersRequest) (*model.CreateQuestionAnswersResponse, error) {
+	var challengeCount int
+
+	processingQuestionAnswers, err := r.GetQuestionAnswersByProjectIDAndStatus(req.ProjectID, "PROCESSING")
+	if err != nil {
+		return nil, fmt.Errorf("QuestionAnswersの取得に失敗しました: %w", err)
+	}
+
+	if len(processingQuestionAnswers) > 0 {
+		// ChallengeCountの高い順に並べる
+		sort.Slice(processingQuestionAnswers, func(i, j int) bool {
+			return processingQuestionAnswers[i].ChallengeCount > processingQuestionAnswers[j].ChallengeCount
+		})
+
+		challengeCount = processingQuestionAnswers[0].ChallengeCount
+	} else {
+		finishedQuestionAnswers, err := r.GetQuestionAnswersByProjectIDAndStatus(req.ProjectID, "FINISHED")
+		if err != nil {
+			return nil, fmt.Errorf("QuestionAnswersの取得に失敗しました: %w", err)
+		}
+
+		// ChallengeCountの高い順に並べる
+		sort.Slice(finishedQuestionAnswers, func(i, j int) bool {
+			return finishedQuestionAnswers[i].ChallengeCount > finishedQuestionAnswers[j].ChallengeCount
+		})
+
+		if len(finishedQuestionAnswers) > 0 {
+			challengeCount = finishedQuestionAnswers[0].ChallengeCount + 1
+		} else {
+			challengeCount = 1
+		}
+	}
+	
+	
 	now := time.Now()
 	questionAnswer := &model.QuestionAnswers{
 		ID:                       uuid.New().String(),
@@ -34,7 +67,7 @@ func (r *questionAnswersRepository) CreateQuestionAnswers(userID string, req *mo
 		ProjectID:                req.ProjectID,
 		QuestionTemplateMasterID: req.QuestionTemplateMasterID,
 		UserAnswer:               req.UserAnswer,
-		ChallengeCount:           req.ChallengeCount,
+		ChallengeCount:           challengeCount,
 		Status:                   "PROCESSING",
 		CreatedAt:                now,
 		UpdatedAt:                now,
@@ -58,17 +91,6 @@ func (r *questionAnswersRepository) CreateQuestionAnswers(userID string, req *mo
 		QuestionTemplateMasterID: questionAnswer.QuestionTemplateMasterID,
 		UserAnswer:               questionAnswer.UserAnswer,
 		ChallengeCount:           questionAnswer.ChallengeCount,
-	}, nil
-}
-
-func (r *questionAnswersRepository) GetQuestionNoCorrectionAnswers(req *model.GetQuestionAnswersRequest) (*model.GetQuestionAnswersResponse, error) {
-	var questionAnswers []model.QuestionAnswers
-	if err := r.db.Where("project_id = ? AND is_correction = ?", req.ProjectID, false).Find(&questionAnswers).Error; err != nil {
-		return nil, fmt.Errorf("回答データの取得に失敗しました: %w", err)
-	}
-
-	return &model.GetQuestionAnswersResponse{
-		QuestionAnswers: questionAnswers,
 	}, nil
 }
 

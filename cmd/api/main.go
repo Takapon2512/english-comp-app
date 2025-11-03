@@ -90,7 +90,7 @@ func main() {
 	questionTemplateMastersService := service.NewQuestionTemplateMastersService(db, questionTemplateMastersRepo)
 	projectQuestionsService := service.NewProjectQuestionsService(db, projectQuestionsRepo, questionTemplateMastersRepo)
 	questionAnswersService := service.NewQuestionAnswersService(db, questionAnswersRepo, projectQuestionsRepo, questionTemplateMastersRepo)
-	correctResultsService := service.NewCorrectResultsService(db, correctResultsRepo, questionTemplateMastersRepo, questionAnswersRepo)
+	correctResultsService := service.NewCorrectResultsService(db, correctResultsRepo, questionTemplateMastersRepo, questionAnswersRepo, categoryMastersRepo)
 
 	// ハンドラーの初期化
 	authHandler := handler.NewAuthHandler(authService, secretKey)
@@ -153,6 +153,7 @@ func main() {
 		api.POST("/question-answers/question-to-answer/:project_id", questionAnswersHandler.GetProjectQuestionToAnswer)
 
 		api.POST("/correct-results", correctResultsHandler.CreateCorrectResult)
+		api.POST("/correct-results/get", correctResultsHandler.GetCorrectResults)
 	}
 
 	// サーバーの起動

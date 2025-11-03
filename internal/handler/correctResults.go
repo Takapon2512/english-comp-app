@@ -51,3 +51,27 @@ func (h *CorrectResultsHandler) CreateCorrectResult(c *gin.Context) {
 
 	c.JSON(http.StatusCreated, resGrand)
 }
+
+// GetCorrectResults 添削結果を取得するハンドラー
+func (h *CorrectResultsHandler) GetCorrectResults(c *gin.Context) {
+	// コンテキストからユーザーIDを取得
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "認証が必要です"})
+		return
+	}
+
+	var reqPost model.GetCorrectResultsRequest
+	if err := c.ShouldBindJSON(&reqPost); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "無効なリクエストです"})
+		return
+	}
+
+	resPost, err := h.correctResultsService.GetCorrectResults(userID.(string), &reqPost)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, resPost)
+}

@@ -14,6 +14,7 @@ type CorrectResultsRepository interface {
 	UpdateCorrectionResult(req *model.UpdateCorrectionResultRequest) (*model.UpdateCorrectionResultResponse, error)
 
 	GetCorrectionResultById(id string) (*model.CorrectionResults, error)
+	GetCorrectResults(req *model.GetCorrectResultsRequest) (*model.GetCorrectResultsResponse, error)
 }
 
 type correctResultsRepository struct {
@@ -32,6 +33,7 @@ func (r *correctResultsRepository) CreateCorrectionResult(req *model.CreateCorre
 		ID:                       uuid.New().String(),
 		QuestionAnswerID:         req.QuestionAnswerID,
 		QuestionTemplateMasterID: req.QuestionTemplateMasterID,
+		ProjectID:                req.ProjectID,
 		GetPoints:                req.GetPoints,
 		ExampleCorrection:        req.ExampleCorrection,
 		CorrectRate:              req.CorrectRate,
@@ -52,6 +54,7 @@ func (r *correctResultsRepository) CreateCorrectionResult(req *model.CreateCorre
 		ID:                       correctionResult.ID,
 		QuestionAnswerID:         correctionResult.QuestionAnswerID,
 		QuestionTemplateMasterID: correctionResult.QuestionTemplateMasterID,
+		ProjectID:                correctionResult.ProjectID,
 		GetPoints:                correctionResult.GetPoints,
 		ExampleCorrection:        correctionResult.ExampleCorrection,
 		CorrectRate:              correctionResult.CorrectRate,
@@ -82,6 +85,7 @@ func (r *correctResultsRepository) UpdateCorrectionResult(req *model.UpdateCorre
 		ID:                       correctionResult.ID,
 		QuestionAnswerID:         correctionResult.QuestionAnswerID,
 		QuestionTemplateMasterID: correctionResult.QuestionTemplateMasterID,
+		ProjectID:                correctionResult.ProjectID,
 		GetPoints:                correctionResult.GetPoints,
 		ExampleCorrection:        correctionResult.ExampleCorrection,
 		CorrectRate:              correctionResult.CorrectRate,
@@ -98,4 +102,33 @@ func (r *correctResultsRepository) GetCorrectionResultById(id string) (*model.Co
 	}
 
 	return &correctionResult, nil
+}
+
+// 添削結果の一覧取得
+func (r *correctResultsRepository) GetCorrectResults(req *model.GetCorrectResultsRequest) (*model.GetCorrectResultsResponse, error) {
+	var correctResults []model.CorrectionResults;
+
+	if err := r.db.Model(&model.CorrectionResults{}).Where("project_id = ? AND challenge_count = ?", req.ProjectID, req.ChallengeCount).Find(&correctResults).Error; err != nil {
+		return nil, fmt.Errorf("添削結果の取得に失敗しました: %w", err)
+	}
+
+	var correctResultsSummary []model.CorrectionResultsSummary;
+	for _, correctResult := range correctResults {
+		correctResultsSummary = append(correctResultsSummary, model.CorrectionResultsSummary{
+			ID: correctResult.ID,
+			QuestionAnswerID: correctResult.QuestionAnswerID,
+			QuestionTemplateMasterID: correctResult.QuestionTemplateMasterID,
+			ProjectID: correctResult.ProjectID,
+			GetPoints: correctResult.GetPoints,
+			ExampleCorrection: correctResult.ExampleCorrection,
+			CorrectRate: correctResult.CorrectRate,
+			Advice: correctResult.Advice,
+			Status: correctResult.Status,
+			ChallengeCount: correctResult.ChallengeCount,
+		})
+	}
+
+	return &model.GetCorrectResultsResponse{
+		CorrectResults: correctResultsSummary,
+	}, nil
 }

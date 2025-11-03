@@ -19,6 +19,7 @@ import (
 type CorrectResultsService interface {
 	CreateCorrectionResult(userID string, req *model.CreateCorrectionResultRequest) (*model.CreateCorrectionResultResponse, error)
 	GrandCorrectResult(userID string, req *model.GrandCorrectResultRequest) (*model.GrandCorrectResultResponse, error)
+	GetCorrectResults(userID string, req *model.GetCorrectResultsRequest) (*model.GetCorrectResultsResponse, error)
 }
 
 type correctResultsService struct {
@@ -26,6 +27,7 @@ type correctResultsService struct {
 	repo                        repository.CorrectResultsRepository
 	questionTemplateMastersRepo repository.QuestionTemplateMastersRepository
 	questionAnswersRepo         repository.QuestionAnswersRepository
+	categoryMastersRepo         repository.CategoryMastersRepository
 	claudeClient                anthropic.Client
 }
 
@@ -34,6 +36,7 @@ func NewCorrectResultsService(
 	repo repository.CorrectResultsRepository,
 	questionTemplateMastersRepo repository.QuestionTemplateMastersRepository,
 	questionAnswersRepo repository.QuestionAnswersRepository,
+	categoryMastersRepo repository.CategoryMastersRepository,
 ) CorrectResultsService {
 	apiKey := os.Getenv("CLAUDE_API_KEY")
 	if apiKey == "" {
@@ -47,6 +50,7 @@ func NewCorrectResultsService(
 		repo:                        repo,
 		questionTemplateMastersRepo: questionTemplateMastersRepo,
 		questionAnswersRepo:         questionAnswersRepo,
+		categoryMastersRepo:         categoryMastersRepo,
 		claudeClient:                claudeClient,
 	}
 }
@@ -107,6 +111,7 @@ func (s *correctResultsService) GrandCorrectResult(userID string, req *model.Gra
 		- コードブロック( バッククォート3つ )や前後の説明文、余計な文字は一切出力しないでください。
 		- 値は有効なJSONとし、数値は整数で出力してください。
 		- キーは英語のまま使用してください。
+		- アドバイスは日本語で出力してください。
 		
 		出力フォーマット（参考）：
 		{
@@ -160,12 +165,12 @@ func (s *correctResultsService) GrandCorrectResult(userID string, req *model.Gra
 	}
 
 	s.repo.UpdateCorrectionResult(&model.UpdateCorrectionResultRequest{
-		ID:                       correctionResult.ID,
-		GetPoints:                llmResponse.Points,
-		ExampleCorrection:        llmResponse.ExampleCorrection,
-		CorrectRate:              llmResponse.CorrectRate,
-		Advice:                   llmResponse.Advice,
-		Status:                   "COMPLETED",
+		ID:                correctionResult.ID,
+		GetPoints:         llmResponse.Points,
+		ExampleCorrection: llmResponse.ExampleCorrection,
+		CorrectRate:       llmResponse.CorrectRate,
+		Advice:            llmResponse.Advice,
+		Status:            "COMPLETED",
 	})
 
 	return &model.GrandCorrectResultResponse{
@@ -178,6 +183,81 @@ func (s *correctResultsService) GrandCorrectResult(userID string, req *model.Gra
 		Advice:                   llmResponse.Advice,
 		Status:                   "COMPLETED",
 		ChallengeCount:           correctionResult.ChallengeCount,
+	}, nil
+}
+
+// 添削結果の取得
+func (s *correctResultsService) GetCorrectResults(userID string, req *model.GetCorrectResultsRequest) (*model.GetCorrectResultsResponse, error) {
+	// 添削結果の取得
+	correctResults, err := s.repo.GetCorrectResults(req)
+	if err != nil {
+		return nil, fmt.Errorf("添削結果の取得に失敗しました: %w", err)
+	}
+
+	var correctResultsSummary []model.CorrectionResultsSummary
+	for _, correctResult := range correctResults.CorrectResults {
+		questionAnswer, err := s.questionAnswersRepo.GetQuestionAnswerById(correctResult.QuestionAnswerID)
+		if err != nil {
+			return nil, fmt.Errorf("質問回答の取得に失敗しました: %w", err)
+		}
+		if questionAnswer == nil {
+			return nil, fmt.Errorf("質問回答（ID: %s）が見つかりません", correctResult.QuestionAnswerID)
+		}
+
+		questionTemplateMaster, err := s.questionTemplateMastersRepo.GetQuestionTemplateMasterByID(correctResult.QuestionTemplateMasterID)
+		if err != nil {
+			return nil, fmt.Errorf("質問テンプレートの取得に失敗しました: %w", err)
+		}
+		if questionTemplateMaster == nil {
+			return nil, fmt.Errorf("質問テンプレート（ID: %s）が見つかりません", correctResult.QuestionTemplateMasterID)
+		}
+
+		categoryMaster, err := s.categoryMastersRepo.GetCategoryMastersByID(questionTemplateMaster.CategoryID)
+		if err != nil {
+			return nil, fmt.Errorf("カテゴリマスターの取得に失敗しました: %w", err)
+		}
+		if categoryMaster == nil {
+			return nil, fmt.Errorf("カテゴリマスター（ID: %s）が見つかりません", questionTemplateMaster.CategoryID)
+		}
+
+		correctResultsSummary = append(correctResultsSummary, model.CorrectionResultsSummary{
+			ID:                       correctResult.ID,
+			ProjectID:                correctResult.ProjectID,
+			QuestionAnswerID:         correctResult.QuestionAnswerID,
+			QuestionTemplateMasterID: correctResult.QuestionTemplateMasterID,
+			GetPoints:                correctResult.GetPoints,
+			ExampleCorrection:        correctResult.ExampleCorrection,
+			CorrectRate:              correctResult.CorrectRate,
+			Advice:                   correctResult.Advice,
+			Status:                   correctResult.Status,
+			ChallengeCount:           correctResult.ChallengeCount,
+			QuestionAnswer: model.QuestionAnswersSummary{
+				ID:         correctResult.QuestionAnswerID,
+				ProjectID:  correctResult.ProjectID,
+				UserID:     questionAnswer.UserID,
+				UserAnswer: questionAnswer.UserAnswer,
+				QuestionTemplateMasterID: questionAnswer.QuestionTemplateMasterID,
+			},
+			QuestionTemplateMaster: model.QuestionTemplateMastersSummary{
+				ID:            correctResult.QuestionTemplateMasterID,
+				CategoryID:    questionTemplateMaster.CategoryID,
+				QuestionType:  questionTemplateMaster.QuestionType,
+				English:       questionTemplateMaster.English,
+				Japanese:      questionTemplateMaster.Japanese,
+				Points:        questionTemplateMaster.Points,
+				Level:         questionTemplateMaster.Level,
+				EstimatedTime: questionTemplateMaster.EstimatedTime,
+				Status:        questionTemplateMaster.Status,
+				Category: model.CategoryInfo{
+					ID:   questionTemplateMaster.CategoryID,
+					Name: categoryMaster.CategoryMasters.Name,
+				},
+			},
+		})
+	}
+
+	return &model.GetCorrectResultsResponse{
+		CorrectResults: correctResultsSummary,
 	}, nil
 }
 

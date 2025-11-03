@@ -10,6 +10,7 @@ type CorrectionResults struct {
 	ID 							string `json:"id" gorm:"primaryKey;type:char(36)"`
 	QuestionAnswerID 			string `json:"question_answer_id" gorm:"type:char(36);not null"`
 	QuestionTemplateMasterID 	string `json:"question_template_master_id" gorm:"type:char(36);not null"`
+	ProjectID 					string `json:"project_id" gorm:"type:char(36);not null"`
 	GetPoints 					int `json:"get_points" gorm:"type:int;not null;default:0"`
 	ExampleCorrection 			string `json:"example_correction" gorm:"type:text;null"`
 	CorrectRate 				int `json:"correct_rate" gorm:"type:int;null"`
@@ -26,6 +27,7 @@ type CorrectionResults struct {
 
 type CorrectionResultsSummary struct {
 	ID 							string `json:"id"`
+	ProjectID 					string `json:"project_id"`
 	QuestionAnswerID 			string `json:"question_answer_id"`
 	QuestionTemplateMasterID 	string `json:"question_template_master_id"`
 	GetPoints 					int `json:"get_points"`
@@ -41,6 +43,7 @@ type CorrectionResultsSummary struct {
 type CreateCorrectionResultRequest struct {
 	QuestionAnswerID string `json:"question_answer_id" binding:"required"`
 	QuestionTemplateMasterID string `json:"question_template_master_id" binding:"required"`
+	ProjectID string `json:"project_id" binding:"required"`
 	GetPoints int `json:"get_points"`
 	ExampleCorrection string `json:"example_correction"`
 	CorrectRate int `json:"correct_rate"`
@@ -62,6 +65,7 @@ type CreateCorrectionResultResponse struct {
 	ID string `json:"id"`
 	QuestionAnswerID string `json:"question_answer_id"`
 	QuestionTemplateMasterID string `json:"question_template_master_id"`
+	ProjectID string `json:"project_id"`
 	GetPoints int `json:"get_points"`
 	ExampleCorrection string `json:"example_correction"`
 	CorrectRate int `json:"correct_rate"`
@@ -74,6 +78,7 @@ type UpdateCorrectionResultResponse struct {
 	ID string `json:"id"`
 	QuestionAnswerID string `json:"question_answer_id"`
 	QuestionTemplateMasterID string `json:"question_template_master_id"`
+	ProjectID string `json:"project_id"`
 	GetPoints int `json:"get_points"`
 	ExampleCorrection string `json:"example_correction"`
 	CorrectRate int `json:"correct_rate"`
@@ -90,10 +95,20 @@ type GrandCorrectResultResponse struct {
 	ID string `json:"id"`
 	QuestionAnswerID string `json:"question_answer_id"`
 	QuestionTemplateMasterID string `json:"question_template_master_id"`
+	ProjectID string `json:"project_id"`
 	GetPoints int `json:"get_points"`
 	ExampleCorrection string `json:"example_correction"`
 	CorrectRate int `json:"correct_rate"`
 	Advice string `json:"advice"`
 	Status string `json:"status"`
 	ChallengeCount int `json:"challenge_count"`
+}
+
+type GetCorrectResultsRequest struct {
+	ProjectID string `json:"project_id" binding:"required"`
+	ChallengeCount int `json:"challenge_count" binding:"required"`
+}
+
+type GetCorrectResultsResponse struct {
+	CorrectResults []CorrectionResultsSummary `json:"correct_results"`
 }

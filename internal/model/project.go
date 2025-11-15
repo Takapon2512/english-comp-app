@@ -8,18 +8,18 @@ import (
 
 // Project はプロジェクトを表す構造体です
 type Project struct {
-	ID          string         `json:"id" gorm:"primaryKey;type:char(36)"`
-	UserID      string         `json:"user_id" gorm:"type:char(36);not null"`
-	Name        string         `json:"name" gorm:"type:varchar(100);not null"`
-	Description string         `json:"description" gorm:"type:text"`
-	CreatedAt   time.Time      `json:"created_at" gorm:"not null"`
-	UpdatedAt   time.Time      `json:"updated_at" gorm:"not null"`
-	DeletedAt   gorm.DeletedAt `json:"deleted_at" gorm:"index"`
-	DeletedBy   string         `json:"deleted_by" gorm:"type:char(36)"`
-	User        *User          `json:"-" gorm:"foreignKey:UserID"`
-	TotalQuestions int `json:"total_questions" gorm:"not null"`
-	CreatedBy   string         `json:"created_by" gorm:"type:char(36);not null"`
-	UpdatedBy   string         `json:"updated_by" gorm:"type:char(36);not null"`
+	ID             string         `json:"id" gorm:"primaryKey;type:char(36)"`
+	UserID         string         `json:"user_id" gorm:"type:char(36);not null"`
+	Name           string         `json:"name" gorm:"type:varchar(100);not null"`
+	Description    string         `json:"description" gorm:"type:text"`
+	CreatedAt      time.Time      `json:"created_at" gorm:"not null"`
+	UpdatedAt      time.Time      `json:"updated_at" gorm:"not null"`
+	DeletedAt      gorm.DeletedAt `json:"deleted_at" gorm:"index"`
+	DeletedBy      string         `json:"deleted_by" gorm:"type:char(36)"`
+	User           *User          `json:"-" gorm:"foreignKey:UserID"`
+	TotalQuestions int            `json:"total_questions" gorm:"->"`
+	CreatedBy      string         `json:"created_by" gorm:"type:char(36);not null"`
+	UpdatedBy      string         `json:"updated_by" gorm:"type:char(36);not null"`
 
 	// リレーション
 	Tags []ProjectTag `json:"tags,omitempty" gorm:"foreignKey:ProjectID"`

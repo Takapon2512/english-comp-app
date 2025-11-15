@@ -108,7 +108,17 @@ func (r *correctResultsRepository) GetCorrectionResultById(id string) (*model.Co
 func (r *correctResultsRepository) GetCorrectResults(req *model.GetCorrectResultsRequest) (*model.GetCorrectResultsResponse, error) {
 	var correctResults []model.CorrectionResults;
 
-	if err := r.db.Model(&model.CorrectionResults{}).Where("project_id = ? AND challenge_count = ?", req.ProjectID, req.ChallengeCount).Find(&correctResults).Error; err != nil {
+	// challenge_countが指定されていない場合は、最大値を取得する
+	challengeCount := req.ChallengeCount
+	if challengeCount == 0 {
+		var maxChallengeCount int
+		if err := r.db.Model(&model.CorrectionResults{}).Where("project_id = ?", req.ProjectID).Select("COALESCE(MAX(challenge_count), 1)").Scan(&maxChallengeCount).Error; err != nil {
+			return nil, fmt.Errorf("最大挑戦回数の取得に失敗しました: %w", err)
+		}
+		challengeCount = maxChallengeCount
+	}
+
+	if err := r.db.Model(&model.CorrectionResults{}).Where("project_id = ? AND challenge_count = ?", req.ProjectID, challengeCount).Find(&correctResults).Error; err != nil {
 		return nil, fmt.Errorf("添削結果の取得に失敗しました: %w", err)
 	}
 

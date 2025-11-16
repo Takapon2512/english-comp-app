@@ -154,6 +154,7 @@ func main() {
 
 		api.POST("/correct-results", correctResultsHandler.CreateCorrectResult)
 		api.POST("/correct-results/get", correctResultsHandler.GetCorrectResults)
+		api.POST("/correct-results/version-list", correctResultsHandler.GetCorrectResultsVersionList)
 	}
 
 	// サーバーの起動

@@ -75,3 +75,27 @@ func (h *CorrectResultsHandler) GetCorrectResults(c *gin.Context) {
 
 	c.JSON(http.StatusOK, resPost)
 }
+
+// GetCorrectResultsVersionList 添削結果のバージョン一覧を取得するハンドラー
+func (h *CorrectResultsHandler) GetCorrectResultsVersionList(c *gin.Context) {
+	// コンテキストからユーザーIDを取得
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "認証が必要です"})
+		return
+	}
+
+	var reqVersionList model.GetCorrectResultsVersionRequest
+	if err := c.ShouldBindJSON(&reqVersionList); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "無効なリクエストです"})
+		return
+	}
+
+	resVersionList, err := h.correctResultsService.GetCorrectResultsVersionList(userID.(string), &reqVersionList)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, resVersionList)
+}

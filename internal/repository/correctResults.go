@@ -15,6 +15,7 @@ type CorrectResultsRepository interface {
 
 	GetCorrectionResultById(id string) (*model.CorrectionResults, error)
 	GetCorrectResults(req *model.GetCorrectResultsRequest) (*model.GetCorrectResultsResponse, error)
+	GetCorrectResultsVersionList(req *model.GetCorrectResultsVersionRequest) ([]model.VersionList, error)
 }
 
 type correctResultsRepository struct {
@@ -26,8 +27,8 @@ func NewCorrectResultsRepository(db *gorm.DB) CorrectResultsRepository {
 }
 
 func (r *correctResultsRepository) CreateCorrectionResult(req *model.CreateCorrectionResultRequest) (*model.CreateCorrectionResultResponse, error) {
-	// 
-	
+	//
+
 	now := time.Now()
 	correctionResult := &model.CorrectionResults{
 		ID:                       uuid.New().String(),
@@ -67,14 +68,14 @@ func (r *correctResultsRepository) CreateCorrectionResult(req *model.CreateCorre
 func (r *correctResultsRepository) UpdateCorrectionResult(req *model.UpdateCorrectionResultRequest) (*model.UpdateCorrectionResultResponse, error) {
 	now := time.Now()
 	correctionResult := &model.CorrectionResults{
-		ID:                       req.ID,
-		GetPoints:                req.GetPoints,
-		ExampleCorrection:        req.ExampleCorrection,
-		CorrectRate:              req.CorrectRate,
-		Advice:                   req.Advice,
-		Status:                   req.Status,
-		UpdatedAt:                now,
-		UpdatedBy:                "system",
+		ID:                req.ID,
+		GetPoints:         req.GetPoints,
+		ExampleCorrection: req.ExampleCorrection,
+		CorrectRate:       req.CorrectRate,
+		Advice:            req.Advice,
+		Status:            req.Status,
+		UpdatedAt:         now,
+		UpdatedBy:         "system",
 	}
 
 	if err := r.db.Model(&model.CorrectionResults{}).Where("id = ?", req.ID).Updates(correctionResult).Error; err != nil {
@@ -106,7 +107,7 @@ func (r *correctResultsRepository) GetCorrectionResultById(id string) (*model.Co
 
 // 添削結果の一覧取得
 func (r *correctResultsRepository) GetCorrectResults(req *model.GetCorrectResultsRequest) (*model.GetCorrectResultsResponse, error) {
-	var correctResults []model.CorrectionResults;
+	var correctResults []model.CorrectionResults
 
 	// challenge_countが指定されていない場合は、最大値を取得する
 	challengeCount := req.ChallengeCount
@@ -122,23 +123,52 @@ func (r *correctResultsRepository) GetCorrectResults(req *model.GetCorrectResult
 		return nil, fmt.Errorf("添削結果の取得に失敗しました: %w", err)
 	}
 
-	var correctResultsSummary []model.CorrectionResultsSummary;
+	var correctResultsSummary []model.CorrectionResultsSummary
 	for _, correctResult := range correctResults {
 		correctResultsSummary = append(correctResultsSummary, model.CorrectionResultsSummary{
-			ID: correctResult.ID,
-			QuestionAnswerID: correctResult.QuestionAnswerID,
+			ID:                       correctResult.ID,
+			QuestionAnswerID:         correctResult.QuestionAnswerID,
 			QuestionTemplateMasterID: correctResult.QuestionTemplateMasterID,
-			ProjectID: correctResult.ProjectID,
-			GetPoints: correctResult.GetPoints,
-			ExampleCorrection: correctResult.ExampleCorrection,
-			CorrectRate: correctResult.CorrectRate,
-			Advice: correctResult.Advice,
-			Status: correctResult.Status,
-			ChallengeCount: correctResult.ChallengeCount,
+			ProjectID:                correctResult.ProjectID,
+			GetPoints:                correctResult.GetPoints,
+			ExampleCorrection:        correctResult.ExampleCorrection,
+			CorrectRate:              correctResult.CorrectRate,
+			Advice:                   correctResult.Advice,
+			Status:                   correctResult.Status,
+			ChallengeCount:           correctResult.ChallengeCount,
 		})
 	}
 
 	return &model.GetCorrectResultsResponse{
 		CorrectResults: correctResultsSummary,
 	}, nil
+}
+
+// 添削結果のバージョン一覧を取得する（生データのみ）
+func (r *correctResultsRepository) GetCorrectResultsVersionList(req *model.GetCorrectResultsVersionRequest) ([]model.VersionList, error) {
+	var versionData []struct {
+		ChallengeCount int       `gorm:"column:challenge_count"`
+		CreatedAt      time.Time `gorm:"column:created_at"`
+	}
+
+	// プロジェクトIDに基づいて、ユニークなchallenge_countとその最初の作成日時を取得
+	if err := r.db.Model(&model.CorrectionResults{}).
+		Select("challenge_count, MIN(created_at) as created_at").
+		Where("project_id = ?", req.ProjectID).
+		Group("challenge_count").
+		Order("challenge_count ASC").
+		Find(&versionData).Error; err != nil {
+		return nil, fmt.Errorf("添削結果のバージョン一覧の取得に失敗しました: %w", err)
+	}
+
+	// 基本的なデータ変換のみ
+	var versionList []model.VersionList
+	for _, data := range versionData {
+		versionList = append(versionList, model.VersionList{
+			ChallengeCount: data.ChallengeCount,
+			CreatedAt:      data.CreatedAt,
+		})
+	}
+
+	return versionList, nil
 }

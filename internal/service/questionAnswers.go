@@ -59,23 +59,14 @@ func (s *questionAnswersService) UpdateQuestionAnswersFinish(projectID string) (
 	// トランザクション内でビジネスロジックを実行
 	err = s.db.Transaction(func(tx *gorm.DB) error {
 		for _, questionAnswer := range questionAnswers {
+			// ステータスをFINISHEDに変更し、更新日時を設定
+			questionAnswer.Status = "FINISHED"
+			questionAnswer.UpdatedAt = now
 
-			// ChallengeCountが0より大きい場合は更新日時のみ更新
-			if questionAnswer.ChallengeCount > 0 {
-				questionAnswer.UpdatedAt = now
-				questionAnswer.Status = "FINISHED"
-
-				if err := s.repo.UpdateQuestionAnswer(tx, &questionAnswer); err != nil {
-					return fmt.Errorf("回答データの更新に失敗しました: %w", err)
-				}
-			} else {
-				// ChallengeCountが0の場合はステータスをFINISHEDに変更
-				questionAnswer.Status = "FINISHED"
-				questionAnswer.UpdatedAt = now
-				if err := s.repo.UpdateQuestionAnswer(tx, &questionAnswer); err != nil {
-					return fmt.Errorf("回答データの更新に失敗しました: %w", err)
-				}
+			if err := s.repo.UpdateQuestionAnswer(tx, &questionAnswer); err != nil {
+				return fmt.Errorf("回答データの更新に失敗しました: %w", err)
 			}
+
 			updatedQuestionAnswers = append(updatedQuestionAnswers, questionAnswer)
 		}
 		return nil
@@ -134,7 +125,7 @@ func (s *questionAnswersService) GetProjectQuestionToAnswer(projectID string) (*
 		}
 
 		return &model.GetProjectQuestionToAnswerResponse{
-			Question: *question,
+			Question:          *question,
 			NowQuestionNumber: nowQuestionNumber,
 		}, nil
 	} else {
@@ -150,7 +141,7 @@ func (s *questionAnswersService) GetProjectQuestionToAnswer(projectID string) (*
 			return nil, fmt.Errorf("問題の取得に失敗しました: %w", err)
 		}
 		return &model.GetProjectQuestionToAnswerResponse{
-			Question: *question,
+			Question:          *question,
 			NowQuestionNumber: nowQuestionNumber,
 		}, nil
 	}

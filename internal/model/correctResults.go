@@ -112,3 +112,17 @@ type GetCorrectResultsRequest struct {
 type GetCorrectResultsResponse struct {
 	CorrectResults []CorrectionResultsSummary `json:"correct_results"`
 }
+
+// 添削結果のバージョン一覧を取得
+type GetCorrectResultsVersionRequest struct {
+	ProjectID string `json:"project_id" binding:"required"`
+}
+
+type VersionList struct {
+	ChallengeCount int `json:"challenge_count"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+type GetCorrectResultsVersionListResponse struct {
+	VersionList []VersionList `json:"version_list"`
+}

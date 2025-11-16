@@ -20,6 +20,7 @@ type CorrectResultsService interface {
 	CreateCorrectionResult(userID string, req *model.CreateCorrectionResultRequest) (*model.CreateCorrectionResultResponse, error)
 	GrandCorrectResult(userID string, req *model.GrandCorrectResultRequest) (*model.GrandCorrectResultResponse, error)
 	GetCorrectResults(userID string, req *model.GetCorrectResultsRequest) (*model.GetCorrectResultsResponse, error)
+	GetCorrectResultsVersionList(userID string, req *model.GetCorrectResultsVersionRequest) (*model.GetCorrectResultsVersionListResponse, error)
 }
 
 type correctResultsService struct {
@@ -232,10 +233,10 @@ func (s *correctResultsService) GetCorrectResults(userID string, req *model.GetC
 			Status:                   correctResult.Status,
 			ChallengeCount:           correctResult.ChallengeCount,
 			QuestionAnswer: model.QuestionAnswersSummary{
-				ID:         correctResult.QuestionAnswerID,
-				ProjectID:  correctResult.ProjectID,
-				UserID:     questionAnswer.UserID,
-				UserAnswer: questionAnswer.UserAnswer,
+				ID:                       correctResult.QuestionAnswerID,
+				ProjectID:                correctResult.ProjectID,
+				UserID:                   questionAnswer.UserID,
+				UserAnswer:               questionAnswer.UserAnswer,
 				QuestionTemplateMasterID: questionAnswer.QuestionTemplateMasterID,
 			},
 			QuestionTemplateMaster: model.QuestionTemplateMastersSummary{
@@ -258,6 +259,27 @@ func (s *correctResultsService) GetCorrectResults(userID string, req *model.GetC
 
 	return &model.GetCorrectResultsResponse{
 		CorrectResults: correctResultsSummary,
+	}, nil
+}
+
+// 添削結果のバージョン一覧を取得
+func (s *correctResultsService) GetCorrectResultsVersionList(userID string, req *model.GetCorrectResultsVersionRequest) (*model.GetCorrectResultsVersionListResponse, error) {
+	// リポジトリ層からデータを取得
+	versionList, err := s.repo.GetCorrectResultsVersionList(req)
+	if err != nil {
+		return nil, err
+	}
+
+	// ビジネスロジック：空の場合のデフォルト処理
+	if len(versionList) == 0 {
+		// 添削結果が存在しない場合は空のリストを返す
+		return &model.GetCorrectResultsVersionListResponse{
+			VersionList: []model.VersionList{},
+		}, nil
+	}
+
+	return &model.GetCorrectResultsVersionListResponse{
+		VersionList: versionList,
 	}, nil
 }
 

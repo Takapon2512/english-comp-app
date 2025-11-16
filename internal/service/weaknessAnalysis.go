@@ -8,22 +8,27 @@ import (
 )
 
 type WeaknessAnalysisService interface {
-  CreateWeaknessAnalysis(userId string, req *model.CreateWeaknessAnalysisRequest) (*model.CreateWeaknessAnalysisResponse)
+	CreateWeaknessAnalysis(userId string, req *model.CreateWeaknessAnalysisRequest) (*model.CreateWeaknessAnalysisResponse, error)
 }
 
 type weaknessAnalysisService struct {
-  db *gorm.DB
-  repo repository.WeaknessAnalysisRepository
+	db   *gorm.DB
+	repo repository.WeaknessAnalysisRepository
 }
 
-func NewWeaknessAnalysisService (db *gorm.DB, repo repository.WeaknessAnalysisRepository) WeaknessAnalysisService {
-  return &weaknessAnalysisService{
-    db: db,
-    repo: repo,
-  }
+func NewWeaknessAnalysisService(db *gorm.DB, repo repository.WeaknessAnalysisRepository) WeaknessAnalysisService {
+	return &weaknessAnalysisService{
+		db:   db,
+		repo: repo,
+	}
 }
 
 // CreateWeaknessAnalysis 学習弱点分析を作成する
-func (s *weaknessAnalysisService) CreateWeaknessAnalysis(userId string, req *model.CreateWeaknessAnalysisRequest) (*model.CreateWeaknessAnalysisResponse) {
-  return s.CreateWeaknessAnalysis(userId, req)
+func (s *weaknessAnalysisService) CreateWeaknessAnalysis(userId string, req *model.CreateWeaknessAnalysisRequest) (*model.CreateWeaknessAnalysisResponse, error) {
+	return s.repo.CreateWeaknessAnalysis(userId, req)
+}
+
+// UpdateWeaknessAnalysis 学習弱点分析を更新する
+func (s *weaknessAnalysisService) UpdateWeaknessAnalysis(userId string, req *model.UpdateWeaknessAnalysisRequest) (*model.UpdateWeaknessAnalysisResponse, error) {
+  return s.repo.UpdateWeaknessAnalysis(userId, req)
 }

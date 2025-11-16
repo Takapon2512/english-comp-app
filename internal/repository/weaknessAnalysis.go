@@ -13,6 +13,7 @@ import (
 
 type WeaknessAnalysisRepository interface {
 	CreateWeaknessAnalysis(userId string, req *model.CreateWeaknessAnalysisRequest) (*model.CreateWeaknessAnalysisResponse, error)
+  UpdateWeaknessAnalysis(userId string, req *model.UpdateWeaknessAnalysisRequest) (*model.UpdateWeaknessAnalysisResponse, error)
 }
 
 type weaknessAnalysisRepository struct {
@@ -59,4 +60,42 @@ func (r *weaknessAnalysisRepository) CreateWeaknessAnalysis(userId string, req *
 	}
 
 	return response, nil
+}
+
+// UpdateWeaknessAnalysis 学習弱点分析を更新する
+func (r *weaknessAnalysisRepository) UpdateWeaknessAnalysis(userId string, req *model.UpdateWeaknessAnalysisRequest) (*model.UpdateWeaknessAnalysisResponse, error) {
+  now := time.Now()
+
+  weaknessAnalysis := &model.WeaknessAnalysis{
+    ID: req.ID,
+    ProjectID: req.ProjectID,
+    AnalysisStatus: req.AnalysisStatus,
+    OverallScore: req.OverallScore,
+    ImprovementRate: req.ImprovementRate,
+    AnalysisDate: req.AnalysisDate,
+    AnalyzedAnswers: req.AnalyzedAnswers,
+    DataPeriodStart: req.DataPeriodStart,
+    DataPeriodEnd: req.DataPeriodEnd,
+    LLMModel: req.LLMModel,
+    AnalysisVersion: req.AnalysisVersion,
+    UpdatedAt: now,
+  }
+
+  if err := r.db.Save(weaknessAnalysis).Error; err != nil {
+    return nil, fmt.Errorf("failed to update weakness analysis: %w", err)
+  }
+
+  return &model.UpdateWeaknessAnalysisResponse{
+    ID: weaknessAnalysis.ID,
+    ProjectID: weaknessAnalysis.ProjectID,
+    AnalysisStatus: weaknessAnalysis.AnalysisStatus,
+    OverallScore: weaknessAnalysis.OverallScore,
+    ImprovementRate: weaknessAnalysis.ImprovementRate,
+    AnalysisDate: weaknessAnalysis.AnalysisDate,
+    AnalyzedAnswers: weaknessAnalysis.AnalyzedAnswers,
+    DataPeriodStart: weaknessAnalysis.DataPeriodStart,
+    DataPeriodEnd: weaknessAnalysis.DataPeriodEnd,
+    LLMModel: weaknessAnalysis.LLMModel,
+    AnalysisVersion: weaknessAnalysis.AnalysisVersion,
+  }, nil
 }

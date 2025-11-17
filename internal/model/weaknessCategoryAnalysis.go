@@ -79,3 +79,11 @@ type CreateWeaknessCategoryAnalysisResponse struct {
 	Strengths string `json:"strengths"` // 具体的な強みのJSON配列
 	Examples string `json:"examples"` // 具体例のJSON配列
 }
+
+// LLMに分析を依頼するリクエスト用構造体
+type LLMWeaknessCategoryAnalysisRequest struct {
+	CategoryName string `json:"category_name"` // カテゴリの表示名
+	QuestionAnswer string `json:"question_answer"` // 解答文
+	CorrectAnswer string `json:"correct_answer"` // 正解文
+	UserAnswer string `json:"user_answer"` // ユーザーの解答文
+}

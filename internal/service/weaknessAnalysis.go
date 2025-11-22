@@ -11,9 +11,11 @@ import (
 
 type WeaknessAnalysisService interface {
 	CreateWeaknessAnalysis(userId string, req *model.CreateWeaknessAnalysisRequest) (*model.CreateWeaknessAnalysisResponse, error)
+	GetWeaknessAnalysis(userId string, req *model.GetWeaknessAnalysisRequest) (*model.GetWeaknessAnalysisResponse, error)
 
 	// LLMによる分析処理
 	WeaknessCategoryAnalysis(userId string, projectId string) ([]model.LLMWeaknessCategoryAnalysisRequest, error)
+	WeaknessDetailedAnalysis(userId string, projectId string) ([]model.LLMWeaknessDetailedAnalysisRequest, error)
 }
 
 type weaknessAnalysisService struct {
@@ -46,6 +48,15 @@ func NewWeaknessAnalysisService(
 // CreateWeaknessAnalysis 学習弱点分析を作成する
 // この時、学習カテゴリ分析、詳細分析、学習アドバイスを作成する
 func (s *weaknessAnalysisService) CreateWeaknessAnalysis(userId string, req *model.CreateWeaknessAnalysisRequest) (*model.CreateWeaknessAnalysisResponse, error) {
+	// 作成前に同じプロジェクトの分析が存在するか確認
+	existingAnalysis, err := s.repo.GetWeaknessAnalysis(userId, &model.GetWeaknessAnalysisRequest{ProjectID: req.ProjectID})
+	if err != nil {
+		return nil, err
+	}
+	if existingAnalysis != nil {
+		return nil, fmt.Errorf("同じプロジェクトの分析が既に存在します")
+	}
+
 	weaknessAnalysis, err := s.repo.CreateWeaknessAnalysis(userId, req)
 
 	if err != nil {
@@ -53,13 +64,18 @@ func (s *weaknessAnalysisService) CreateWeaknessAnalysis(userId string, req *mod
 	}
 
 	// 学習カテゴリ分析を作成する
-  llmRequests, err := s.WeaknessCategoryAnalysis(userId, req.ProjectID)
-  if err != nil {
-    return nil, err
-  }
-  fmt.Println(llmRequests)
+	llmRequestsCategoryAnalysis, err := s.WeaknessCategoryAnalysis(userId, req.ProjectID)
+	if err != nil {
+		return nil, err
+	}
+	fmt.Println(llmRequestsCategoryAnalysis)
 
 	// 詳細分析を作成する
+	llmRequestsDetailedAnalysis, err := s.WeaknessDetailedAnalysis(userId, req.ProjectID)
+	if err != nil {
+		return nil, err
+	}
+	fmt.Println(llmRequestsDetailedAnalysis)
 
 	// 学習アドバイスを作成する
 
@@ -68,7 +84,21 @@ func (s *weaknessAnalysisService) CreateWeaknessAnalysis(userId string, req *mod
 
 // UpdateWeaknessAnalysis 学習弱点分析を更新する
 func (s *weaknessAnalysisService) UpdateWeaknessAnalysis(userId string, req *model.UpdateWeaknessAnalysisRequest) (*model.UpdateWeaknessAnalysisResponse, error) {
-	return s.repo.UpdateWeaknessAnalysis(userId, req)
+	// 更新前に該当のプロジェクトが存在することを確認
+	existingAnalysis, err := s.repo.GetWeaknessAnalysis(userId, &model.GetWeaknessAnalysisRequest{ProjectID: req.ProjectID})
+
+	if err != nil {
+		return nil, err
+	}
+
+	if existingAnalysis == nil {
+		return nil, fmt.Errorf("プロジェクトが存在しません")
+	}
+}
+
+// GetWeaknessAnalysis 学習弱点分析を取得する
+func (s *weaknessAnalysisService) GetWeaknessAnalysis(userId string, req *model.GetWeaknessAnalysisRequest) (*model.GetWeaknessAnalysisResponse, error) {
+	return s.repo.GetWeaknessAnalysis(userId, req)
 }
 
 // weaknessCategoryの分析をLLMにて行う
@@ -93,13 +123,13 @@ func (s *weaknessAnalysisService) WeaknessCategoryAnalysis(userId string, projec
 		}
 
 		// 問題データ取得
-		questionTemplateMaster, err := s.questionTemplateMastersRepo.GetQuestionTemplateMasterByID(correctResult.QuestionAnswer.QuestionTemplateMasterID)
+		questionTemplateMaster, err := s.questionTemplateMastersRepo.GetQuestionTemplateMasterByID(questionAnswer.QuestionTemplateMasterID)
 		if err != nil {
 			return nil, err
 		}
 
 		if questionTemplateMaster == nil {
-			return nil, fmt.Errorf("問題データ（ID: %s）が見つかりません", correctResult.QuestionAnswer.QuestionTemplateMasterID)
+			return nil, fmt.Errorf("問題データ（ID: %s）が見つかりません", questionAnswer.QuestionTemplateMasterID)
 		}
 
 		// カテゴリデータを取得
@@ -115,6 +145,50 @@ func (s *weaknessAnalysisService) WeaknessCategoryAnalysis(userId string, projec
 		// LLMによる分析を行う
 		llmRequest := model.LLMWeaknessCategoryAnalysisRequest{
 			CategoryName:  categoryMaster.CategoryMasters.Name,
+			Question:      questionTemplateMaster.English,
+			UserAnswer:    questionAnswer.UserAnswer,
+			CorrectAnswer: correctResult.ExampleCorrection,
+		}
+
+		llmRequests = append(llmRequests, llmRequest)
+	}
+
+	return llmRequests, nil
+}
+
+// WeaknessDetailedAnalysis 詳細分析をLLMにて行う
+func (s *weaknessAnalysisService) WeaknessDetailedAnalysis(userId string, projectId string) ([]model.LLMWeaknessDetailedAnalysisRequest, error) {
+	// 解答データを取得
+	correctResults, err := s.correctResultsRepo.GetCorrectResults(&model.GetCorrectResultsRequest{ProjectID: projectId})
+	if err != nil {
+		return nil, err
+	}
+
+	llmRequests := []model.LLMWeaknessDetailedAnalysisRequest{}
+
+	for _, correctResult := range correctResults.CorrectResults {
+		// 解答データを取得
+		questionAnswer, err := s.questionAnswersRepo.GetQuestionAnswerById(correctResult.QuestionAnswerID)
+		if err != nil {
+			return nil, err
+		}
+
+		if questionAnswer == nil {
+			return nil, fmt.Errorf("解答データ（ID: %s）が見つかりません", correctResult.QuestionAnswerID)
+		}
+
+		// 問題データ取得
+		questionTemplateMaster, err := s.questionTemplateMastersRepo.GetQuestionTemplateMasterByID(questionAnswer.QuestionTemplateMasterID)
+		if err != nil {
+			return nil, err
+		}
+
+		if questionTemplateMaster == nil {
+			return nil, fmt.Errorf("問題データ（ID: %s）が見つかりません", questionAnswer.QuestionTemplateMasterID)
+		}
+
+		// LLMによる分析を行う
+		llmRequest := model.LLMWeaknessDetailedAnalysisRequest{
 			Question:      questionTemplateMaster.English,
 			UserAnswer:    questionAnswer.UserAnswer,
 			CorrectAnswer: correctResult.ExampleCorrection,

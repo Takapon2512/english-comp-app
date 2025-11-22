@@ -81,6 +81,7 @@ func main() {
 	projectQuestionsRepo := repository.NewProjectQuestionsRepository(db)
 	questionAnswersRepo := repository.NewQuestionAnswersRepository(db)
 	correctResultsRepo := repository.NewCorrectResultsRepository(db)
+	weaknessAnalysisRepo := repository.NewWeaknessAnalysisRepository(db)
 
 	// サービスの初期化
 	authService := service.NewAuthService(userRepo)
@@ -91,6 +92,7 @@ func main() {
 	projectQuestionsService := service.NewProjectQuestionsService(db, projectQuestionsRepo, questionTemplateMastersRepo)
 	questionAnswersService := service.NewQuestionAnswersService(db, questionAnswersRepo, projectQuestionsRepo, questionTemplateMastersRepo)
 	correctResultsService := service.NewCorrectResultsService(db, correctResultsRepo, questionTemplateMastersRepo, questionAnswersRepo, categoryMastersRepo)
+	weaknessAnalysisService := service.NewWeaknessAnalysisService(db, weaknessAnalysisRepo, correctResultsRepo, questionAnswersRepo, questionTemplateMastersRepo, categoryMastersRepo)
 
 	// ハンドラーの初期化
 	authHandler := handler.NewAuthHandler(authService, secretKey)
@@ -101,6 +103,7 @@ func main() {
 	projectQuestionsHandler := handler.NewProjectQuestionsHandler(projectQuestionsService)
 	questionAnswersHandler := handler.NewQuestionAnswersHandler(questionAnswersService)
 	correctResultsHandler := handler.NewCorrectResultsHandler(correctResultsService)
+	weaknessAnalysisHandler := handler.NewWeaknessAnalysisHandler(weaknessAnalysisService)
 
 	// 認証ミドルウェアの初期化
 	authMiddleware := middleware.NewAuthMiddleware(middleware.AuthConfig{
@@ -155,6 +158,9 @@ func main() {
 		api.POST("/correct-results", correctResultsHandler.CreateCorrectResult)
 		api.POST("/correct-results/get", correctResultsHandler.GetCorrectResults)
 		api.POST("/correct-results/version-list", correctResultsHandler.GetCorrectResultsVersionList)
+
+		// 弱点分析テーブルを作成+LLMによる分析を行う
+		api.POST("/weakness-analysis/create-analysis", weaknessAnalysisHandler.CreateWeaknessAnalysis)
 	}
 
 	// サーバーの起動

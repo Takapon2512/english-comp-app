@@ -8,10 +8,12 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/Takanpon2512/english-app/internal/model"
+	"github.com/Takanpon2512/english-app/internal/utils"
 )
 
 type WeaknessCategoryAnalysisRepository interface {
 	CreateWeaknessCategoryAnalysis(userId string, req *model.CreateWeaknessCategoryAnalysisRequest) (*model.CreateWeaknessCategoryAnalysisResponse, error)
+	GetWeaknessCategoryAnalysis(analysisId string) (*model.WeaknessCategoryAnalysisResponse, error)
 }
 
 type weaknessCategoryAnalysisRepository struct {
@@ -60,4 +62,55 @@ func (r *weaknessCategoryAnalysisRepository) CreateWeaknessCategoryAnalysis(user
 		Strengths:    weaknessCategoryAnalysis.Strengths,
 		Examples:     weaknessCategoryAnalysis.Examples,
 	}, nil
+}
+
+// GetWeaknessCategoryAnalysis カテゴリ別の分析結果を取得する
+func (r *weaknessCategoryAnalysisRepository) GetWeaknessCategoryAnalysis(analysisId string) (*model.WeaknessCategoryAnalysisResponse, error) {
+	var weaknessCategoryAnalyses []model.WeaknessCategoryAnalysisSummary
+
+	// 正しいテーブル名を指定してクエリを実行
+	if err := r.db.Table("weakness_category_analyses").Where("analysis_id = ?", analysisId).Find(&weaknessCategoryAnalyses).Error; err != nil {
+		return nil, fmt.Errorf("failed to get weakness category analysis: %w", err)
+	}
+
+	// 複数のカテゴリ分析結果をレスポンス形式に変換
+	var responses []*model.WeaknessCategoryAnalysisResponse
+	for _, analysis := range weaknessCategoryAnalyses {
+		// JSON文字列をスライスに変換
+		issues, err := utils.ParseJSONStringArray(analysis.Issues)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse issues JSON: %w", err)
+		}
+
+		strengths, err := utils.ParseJSONStringArray(analysis.Strengths)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse strengths JSON: %w", err)
+		}
+
+		examples, err := utils.ParseJSONStringArray(analysis.Examples)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse examples JSON: %w", err)
+		}
+
+		response := &model.WeaknessCategoryAnalysisResponse{
+			ID:           analysis.ID,
+			AnalysisID:   analysis.AnalysisID,
+			CategoryID:   analysis.CategoryID,
+			CategoryName: analysis.CategoryName,
+			Score:        analysis.Score,
+			IsWeakness:   analysis.IsWeakness,
+			IsStrength:   analysis.IsStrength,
+			Issues:       issues,
+			Strengths:    strengths,
+			Examples:     examples,
+		}
+		responses = append(responses, response)
+	}
+
+	// 最初の結果を返す（複数ある場合は最初のもの）
+	if len(responses) > 0 {
+		return responses[0], nil
+	}
+
+	return nil, fmt.Errorf("no weakness category analysis found for analysis_id: %s", analysisId)
 }

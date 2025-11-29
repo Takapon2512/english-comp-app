@@ -34,6 +34,8 @@ type WeaknessAnalysisService interface {
 	WeaknessCategoryAnalysis(userId string, projectId string) (map[string]*CategoryAnalysisResult, error)
 	WeaknessDetailedAnalysis(userId string, projectId string) (*model.DetailedAnalysisResult, error)
 	WeaknessLearningAdvice(userId string, projectId string, detailedAnalysis *model.DetailedAnalysisResult) (*model.PersonalizedAdvice, error)
+
+	GetWeaknessAnalysisAllSummary(userId string, projectId string) (*model.WeaknessAnalysisAllSummary, error)
 }
 
 type weaknessAnalysisService struct {
@@ -712,4 +714,46 @@ func (s *weaknessAnalysisService) saveDetailedAnalysisResult(userId string, anal
 	}
 
 	return nil
+}
+
+// 分析結果を全て取得
+func (s *weaknessAnalysisService) GetWeaknessAnalysisAllSummary(userId string, projectId string) (*model.WeaknessAnalysisAllSummary, error) {
+	weaknessAnalysisSummary, err := s.repo.GetWeaknessAnalysis(userId, &model.GetWeaknessAnalysisRequest{ProjectID: projectId})
+	if err != nil {
+		return nil, fmt.Errorf("分析結果取得エラー: %w", err)
+	}
+	if weaknessAnalysisSummary == nil {
+		return nil, fmt.Errorf("分析結果が見つかりません")
+	}
+
+	weaknessCategoryAnalysisSummary, err := s.weaknessCategoryAnalysisRepo.GetWeaknessCategoryAnalysis(weaknessAnalysisSummary.Analysis.ID)
+	if err != nil {
+		return nil, fmt.Errorf("カテゴリ分析結果取得エラー: %w", err)
+	}
+	if weaknessCategoryAnalysisSummary == nil {
+		return nil, fmt.Errorf("カテゴリ分析結果が見つかりません")
+	}
+
+	weaknessDetailedAnalysisSummary, err := s.weaknessDetailedAnalysisRepo.GetWeaknessDetailedAnalysis(weaknessAnalysisSummary.Analysis.ID)
+	if err != nil {
+		return nil, fmt.Errorf("詳細分析結果取得エラー: %w", err)
+	}
+	if weaknessDetailedAnalysisSummary == nil {
+		return nil, fmt.Errorf("詳細分析結果が見つかりません")
+	}
+
+	weaknessLearningAdviceSummary, err := s.weaknessLearningAdviceRepo.GetWeaknessLearningAdvice(weaknessAnalysisSummary.Analysis.ID)
+	if err != nil {
+		return nil, fmt.Errorf("学習アドバイス結果取得エラー: %w", err)
+	}
+	if weaknessLearningAdviceSummary == nil {
+		return nil, fmt.Errorf("学習アドバイス結果が見つかりません")
+	}
+
+	return &model.WeaknessAnalysisAllSummary{
+		WeaknessAnalysisSummary:         weaknessAnalysisSummary.Analysis,
+		WeaknessCategoryAnalysisSummary: []model.WeaknessCategoryAnalysisResponse{*weaknessCategoryAnalysisSummary},
+		WeaknessDetailedAnalysisSummary: *weaknessDetailedAnalysisSummary,
+		WeaknessLearningAdviceSummary:   *weaknessLearningAdviceSummary,
+	}, nil
 }

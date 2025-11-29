@@ -41,6 +41,24 @@ type WeaknessDetailedAnalysis struct {
 	UpdatedBy string         `json:"updated_by" gorm:"type:char(36);not null"` // レコード最終更新者のユーザーID
 }
 
+// weaknessDetailedAnalysisSummary は詳細分析結果のサマリーを表す構造体
+type WeaknessDetailedAnalysisSummary struct {
+	ID         string `json:"id"`         // レコードの一意識別子
+	AnalysisID string `json:"analysis_id"` // 親分析レコードのID
+	GrammarScore int    `json:"grammar_score"` // 文法スコア（0-100）
+	GrammarDescription string `json:"grammar_description"` // 文法面の詳細分析説明
+	GrammarExamples string `json:"grammar_examples"` // 文法の具体例JSON配列
+	VocabularyScore int    `json:"vocabulary_score"` // 語彙スコア（0-100）
+	VocabularyDescription string `json:"vocabulary_description"` // 語彙面の詳細分析説明
+	VocabularyExamples string `json:"vocabulary_examples"` // 語彙の具体例JSON配列
+	ExpressionScore int    `json:"expression_score"` // 表現スコア（0-100）
+	ExpressionDescription string `json:"expression_description"` // 表現面の詳細分析説明
+	ExpressionExamples string `json:"expression_examples"` // 表現の具体例JSON配列
+	StructureScore int    `json:"structure_score"` // 構成スコア（0-100）
+	StructureDescription string `json:"structure_description"` // 構成面の詳細分析説明
+	StructureExamples string `json:"structure_examples"` // 構成の具体例JSON配列
+}
+
 // ===== 詳細分析用のサマリー構造体 =====
 
 // DetailedAnalysisResult は4つの主要学習領域の詳細分析結果を表す構造体

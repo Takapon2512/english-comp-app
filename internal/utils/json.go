@@ -47,3 +47,17 @@ func ExtractFirstJSONObject(input string) (string, error) {
 
 	return jsonStr, nil
 }
+
+// ParseJSONStringArray JSON文字列を文字列配列にパースする
+func ParseJSONStringArray(jsonStr string) ([]string, error) {
+	if jsonStr == "" {
+		return []string{}, nil
+	}
+
+	var result []string
+	if err := json.Unmarshal([]byte(jsonStr), &result); err != nil {
+		return nil, fmt.Errorf("JSON文字列の配列への変換に失敗しました: %w", err)
+	}
+
+	return result, nil
+}

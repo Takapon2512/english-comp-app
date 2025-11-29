@@ -33,6 +33,17 @@ func (WeaknessLearningAdvice) TableName() string {
 	return "weakness_learning_advice"
 }
 
+// weaknessLearningAdviceSummary は学習アドバイスのサマリーを表す構造体
+type WeaknessLearningAdviceSummary struct {
+	ID         string `json:"id"`         // レコードの一意識別子
+	AnalysisID string `json:"analysis_id"` // 親分析レコードのID
+	LearningAdvice string `json:"learning_advice"` // 個別学習アドバイス（具体的な学習方法や注意点）
+	RecommendedActions string `json:"recommended_actions"` // 推奨アクションのJSON配列（具体的な学習行動の提案）
+	NextGoals string `json:"next_goals"` // 次の学習目標のJSON配列（短期・中期目標の設定）
+	StudyPlan string `json:"study_plan"` // 個別学習プラン（期間、内容、方法を含む詳細プラン）
+	MotivationalMessage string `json:"motivational_message"` // モチベーション向上メッセージ（励ましや成長の認識）
+}
+
 // ===== 学習アドバイス用のサマリー構造体 =====
 
 // PersonalizedAdvice は個別化された学習支援情報を表す構造体

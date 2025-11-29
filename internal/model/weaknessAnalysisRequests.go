@@ -80,3 +80,11 @@ type WeaknessAnalysisSummary struct {
 	DataPeriodStart    time.Time              `json:"data_period_start"`   // 分析対象期間の開始日
 	DataPeriodEnd      time.Time              `json:"data_period_end"`     // 分析対象期間の終了日
 }
+
+// WeaknessAnalysisAllSummary は分析結果のサマリーを表す構造体
+type WeaknessAnalysisAllSummary struct {
+	WeaknessAnalysisSummary         WeaknessAnalysisSummary            `json:"weakness_analysis_summary"`
+	WeaknessCategoryAnalysisSummary []WeaknessCategoryAnalysisResponse `json:"weakness_category_analysis_summary"`
+	WeaknessDetailedAnalysisSummary WeaknessDetailedAnalysisSummary    `json:"weakness_detailed_analysis_summary"`
+	WeaknessLearningAdviceSummary   WeaknessLearningAdviceSummary      `json:"weakness_learning_advice_summary"`
+}

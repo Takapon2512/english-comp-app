@@ -55,35 +55,35 @@ type CategoryStrength struct {
 
 // CreateWeaknessCategoryAnalysisRequest はカテゴリ別の分析結果を作成するリクエスト用構造体
 type CreateWeaknessCategoryAnalysisRequest struct {
-	AnalysisID string `json:"analysis_id" binding:"required"` // 親分析レコードのID（必須）
-	CategoryID string `json:"category_id" binding:"required"` // カテゴリマスターのID（必須）
-	CategoryName string `json:"category_name" binding:"required"` // カテゴリの表示名（必須）
-	Score int `json:"score" binding:"required"` // このカテゴリでのスコア（必須）
-	IsWeakness bool `json:"is_weakness" binding:"required"` // 苦手カテゴリかどうか（必須）
-	IsStrength bool `json:"is_strength" binding:"required"` // 得意カテゴリかどうか（必須）
-	Issues string `json:"issues" binding:"required"` // 具体的な問題点のJSON配列（必須）
-	Strengths string `json:"strengths" binding:"required"` // 具体的な強みのJSON配列（必須）
-	Examples string `json:"examples" binding:"required"` // 具体例のJSON配列（必須）
+	AnalysisID 			string 	`json:"analysis_id" binding:"required"`   // 親分析レコードのID（必須）
+	CategoryID 			string 	`json:"category_id" binding:"required"`   // カテゴリマスターのID（必須）
+	CategoryName 		string 	`json:"category_name" binding:"required"` // カテゴリの表示名（必須）
+	Score 				int 	`json:"score" binding:"required"`         // このカテゴリでのスコア（必須）
+	IsWeakness 			bool 	`json:"is_weakness" binding:"required"`   // 苦手カテゴリかどうか（必須）
+	IsStrength 			bool 	`json:"is_strength" binding:"required"`   // 得意カテゴリかどうか（必須）
+	Issues 				string 	`json:"issues" binding:"required"`        // 具体的な問題点のJSON配列（必須）
+	Strengths 			string 	`json:"strengths" binding:"required"`     // 具体的な強みのJSON配列（必須）
+	Examples 			string 	`json:"examples" binding:"required"`      // 具体例のJSON配列（必須）
 }
 
 // CreateWeaknessCategoryAnalysisResponse はカテゴリ別の分析結果を作成するレスポンス用構造体
 type CreateWeaknessCategoryAnalysisResponse struct {
-	ID string `json:"id"` // 作成されたカテゴリ別分析レコードのID
-	AnalysisID string `json:"analysis_id"` // 親分析レコードのID
-	CategoryID string `json:"category_id"` // カテゴリマスターのID
-	CategoryName string `json:"category_name"` // カテゴリの表示名
-	Score int `json:"score"` // このカテゴリでのスコア
-	IsWeakness bool `json:"is_weakness"` // 苦手カテゴリかどうか
-	IsStrength bool `json:"is_strength"` // 得意カテゴリかどうか
-	Issues string `json:"issues"` // 具体的な問題点のJSON配列
-	Strengths string `json:"strengths"` // 具体的な強みのJSON配列
-	Examples string `json:"examples"` // 具体例のJSON配列
+	ID                  string `json:"id"` 				// 作成されたカテゴリ別分析レコードのID
+	AnalysisID          string `json:"analysis_id"` 	// 親分析レコードのID
+	CategoryID          string `json:"category_id"` 	// カテゴリマスターのID
+	CategoryName        string `json:"category_name"` 	// カテゴリの表示名
+	Score               int    `json:"score"` 			// このカテゴリでのスコア
+	IsWeakness          bool   `json:"is_weakness"` 	// 苦手カテゴリかどうか
+	IsStrength          bool   `json:"is_strength"` 	// 得意カテゴリかどうか
+	Issues              string `json:"issues"` 			// 具体的な問題点のJSON配列
+	Strengths           string `json:"strengths"` 		// 具体的な強みのJSON配列
+	Examples            string `json:"examples"` 		// 具体例のJSON配列
 }
 
 // LLMに分析を依頼するリクエスト用構造体
 type LLMWeaknessCategoryAnalysisRequest struct {
-	CategoryName string `json:"category_name"` // カテゴリの表示名
-	Question string `json:"question"` // 問題文
-	UserAnswer string `json:"user_answer"` // 解答文
-	CorrectAnswer string `json:"correct_answer"` // 正解文
+	CategoryName 		string `json:"category_name"` 	// カテゴリの表示名
+	Question     		string `json:"question"` 		// 問題文
+	UserAnswer   		string `json:"user_answer"` 	// 解答文
+	CorrectAnswer 		string `json:"correct_answer"` 	// 正解文
 }

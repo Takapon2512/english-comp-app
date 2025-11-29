@@ -42,21 +42,31 @@ type PersonalizedAdvice struct {
 
 // CreateWeaknessLearningAdviceRequest は学習アドバイスを作成するリクエスト用構造体
 type CreateWeaknessLearningAdviceRequest struct {
-	AnalysisID string `json:"analysis_id" binding:"required"` // 親分析レコードのID（必須）
-	LearningAdvice string `json:"learning_advice" binding:"required"` // 個別学習アドバイス（具体的な学習方法や注意点）
-	RecommendedActions string `json:"recommended_actions" binding:"required"` // 推奨アクションのJSON配列（具体的な学習行動の提案）
-	NextGoals string `json:"next_goals" binding:"required"` // 次の学習目標のJSON配列（短期・中期目標の設定）
-	StudyPlan string `json:"study_plan" binding:"required"` // 個別学習プラン（期間、内容、方法を含む詳細プラン）
-	MotivationalMessage string `json:"motivational_message" binding:"required"` // モチベーション向上メッセージ（励ましや成長の認識）
+	AnalysisID            string `json:"analysis_id" binding:"required"`   // 親分析レコードのID（必須）
+	LearningAdvice        string `json:"learning_advice"` // 個別学習アドバイス（具体的な学習方法や注意点）
+	RecommendedActions    string `json:"recommended_actions"` // 推奨アクションのJSON配列（具体的な学習行動の提案）
+	NextGoals             string `json:"next_goals"` // 次の学習目標のJSON配列（短期・中期目標の設定）
+	StudyPlan             string `json:"study_plan"` // 個別学習プラン（期間、内容、方法を含む詳細プラン）
+	MotivationalMessage   string `json:"motivational_message"` // モチベーション向上メッセージ（励ましや成長の認識）
 }
 
 // CreateWeaknessLearningAdviceResponse は学習アドバイスを作成するレスポンス用構造体
 type CreateWeaknessLearningAdviceResponse struct {
-	ID string `json:"id"` // 作成された学習アドバイスレコードのID
-	AnalysisID string `json:"analysis_id"` // 親分析レコードのID
-	LearningAdvice string `json:"learning_advice"` // 個別学習アドバイス（具体的な学習方法や注意点）
-	RecommendedActions string `json:"recommended_actions"` // 推奨アクションのJSON配列（具体的な学習行動の提案）
-	NextGoals string `json:"next_goals"` // 次の学習目標のJSON配列（短期・中期目標の設定）
-	StudyPlan string `json:"study_plan"` // 個別学習プラン（期間、内容、方法を含む詳細プラン）
-	MotivationalMessage string `json:"motivational_message"` // モチベーション向上メッセージ（励ましや成長の認識）
+	ID 						string `json:"id"` // 作成された学習アドバイスレコードのID
+	AnalysisID 				string `json:"analysis_id"` // 親分析レコードのID
+	LearningAdvice 			string `json:"learning_advice"` // 個別学習アドバイス（具体的な学習方法や注意点）
+	RecommendedActions 		string `json:"recommended_actions"` // 推奨アクションのJSON配列（具体的な学習行動の提案）
+	NextGoals 				string `json:"next_goals"` // 次の学習目標のJSON配列（短期・中期目標の設定）
+	StudyPlan 				string `json:"study_plan"` // 個別学習プラン（期間、内容、方法を含む詳細プラン）
+	MotivationalMessage 	string `json:"motivational_message"` // モチベーション向上メッセージ（励ましや成長の認識）
+}
+
+// LLMが生成した個別学習アドバイスを表す構造体
+type LLMWeaknessLearningAdviceRequest struct {
+	GrammarScore          int    `json:"grammar_score"`          // 文法スコア（0-100）
+	GrammarDescription    string `json:"grammar_description"`    // 文法面の詳細分析説明
+	VocabularyScore       int    `json:"vocabulary_score"`       // 語彙スコア（0-100）
+	VocabularyDescription string `json:"vocabulary_description"` // 語彙面の詳細分析説明
+	ExpressionScore       int    `json:"expression_score"`       // 表現スコア（0-100）
+	ExpressionDescription string `json:"expression_description"` // 表現面の詳細分析説明
 }

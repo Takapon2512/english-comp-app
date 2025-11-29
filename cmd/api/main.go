@@ -82,6 +82,7 @@ func main() {
 	questionAnswersRepo := repository.NewQuestionAnswersRepository(db)
 	correctResultsRepo := repository.NewCorrectResultsRepository(db)
 	weaknessAnalysisRepo := repository.NewWeaknessAnalysisRepository(db)
+	weaknessCategoryAnalysisRepo := repository.NewWeaknessCategoryAnalysisRepository(db)
 
 	// サービスの初期化
 	authService := service.NewAuthService(userRepo)
@@ -92,7 +93,7 @@ func main() {
 	projectQuestionsService := service.NewProjectQuestionsService(db, projectQuestionsRepo, questionTemplateMastersRepo)
 	questionAnswersService := service.NewQuestionAnswersService(db, questionAnswersRepo, projectQuestionsRepo, questionTemplateMastersRepo)
 	correctResultsService := service.NewCorrectResultsService(db, correctResultsRepo, questionTemplateMastersRepo, questionAnswersRepo, categoryMastersRepo)
-	weaknessAnalysisService := service.NewWeaknessAnalysisService(db, weaknessAnalysisRepo, correctResultsRepo, questionAnswersRepo, questionTemplateMastersRepo, categoryMastersRepo)
+	weaknessAnalysisService := service.NewWeaknessAnalysisService(db, weaknessAnalysisRepo, correctResultsRepo, questionAnswersRepo, questionTemplateMastersRepo, categoryMastersRepo, weaknessCategoryAnalysisRepo)
 
 	// ハンドラーの初期化
 	authHandler := handler.NewAuthHandler(authService, secretKey)

@@ -130,7 +130,7 @@ func (s *correctResultsService) GrandCorrectResult(userID string, req *model.Gra
 		context.Background(),
 		anthropic.MessageNewParams{
 			Model:     anthropic.ModelClaude3_7Sonnet20250219,
-			MaxTokens: 1000,
+			MaxTokens: 5000,
 			Messages: []anthropic.MessageParam{
 				anthropic.NewUserMessage(
 					anthropic.NewTextBlock(prompt),
@@ -287,8 +287,11 @@ func (s *correctResultsService) GetCorrectResultsVersionList(userID string, req 
 // - コードブロック( ```json ... ``` )が含まれていても取り除いて抽出する
 func extractFirstJSONObject(input string) (string, error) {
 	trimmed := strings.TrimSpace(input)
+	fmt.Printf("extractFirstJSONObject input: %s\n", trimmed)
+
 	// コードフェンスがある場合は除去
 	if strings.HasPrefix(trimmed, "```") {
+		fmt.Println("Removing code fences...")
 		// 先頭のフェンスとオプションの言語指定を取り除く
 		trimmed = strings.TrimPrefix(trimmed, "```json")
 		trimmed = strings.TrimPrefix(trimmed, "```JSON")
@@ -298,6 +301,8 @@ func extractFirstJSONObject(input string) (string, error) {
 		if idx := strings.LastIndex(trimmed, "```"); idx != -1 {
 			trimmed = trimmed[:idx]
 		}
+		trimmed = strings.TrimSpace(trimmed)
+		fmt.Printf("After removing code fences: %s\n", trimmed)
 	}
 
 	// 最初の完全なJSONオブジェクトを括弧のネストで検出
@@ -334,10 +339,14 @@ func extractFirstJSONObject(input string) (string, error) {
 			if depth > 0 {
 				depth--
 				if depth == 0 && start != -1 {
-					return trimmed[start : i+1], nil
+					result := trimmed[start : i+1]
+					fmt.Printf("Extracted JSON: %s\n", result)
+					return result, nil
 				}
 			}
 		}
 	}
+
+	fmt.Printf("Failed to extract JSON from: %s\n", trimmed)
 	return "", fmt.Errorf("valid JSON object not found in LLM output")
 }

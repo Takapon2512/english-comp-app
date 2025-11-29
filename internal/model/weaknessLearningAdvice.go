@@ -28,6 +28,11 @@ type WeaknessLearningAdvice struct {
 	UpdatedBy string         `json:"updated_by" gorm:"type:char(36);not null"` // レコード最終更新者のユーザーID
 }
 
+// TableName GORMのテーブル名を明示的に指定
+func (WeaknessLearningAdvice) TableName() string {
+	return "weakness_learning_advice"
+}
+
 // ===== 学習アドバイス用のサマリー構造体 =====
 
 // PersonalizedAdvice は個別化された学習支援情報を表す構造体

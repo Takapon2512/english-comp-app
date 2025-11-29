@@ -9,8 +9,10 @@ import (
 
 	"gorm.io/gorm"
 
+	"github.com/Takanpon2512/english-app/internal/config"
 	"github.com/Takanpon2512/english-app/internal/model"
 	"github.com/Takanpon2512/english-app/internal/repository"
+	"github.com/Takanpon2512/english-app/internal/utils"
 	"github.com/anthropics/anthropic-sdk-go"
 	"github.com/anthropics/anthropic-sdk-go/option"
 )
@@ -30,8 +32,8 @@ type WeaknessAnalysisService interface {
 
 	// LLMによる分析処理
 	WeaknessCategoryAnalysis(userId string, projectId string) (map[string]*CategoryAnalysisResult, error)
-	WeaknessDetailedAnalysis(userId string, projectId string) ([]model.LLMWeaknessDetailedAnalysisRequest, error)
-	WeaknessLearningAdvice(userId string, projectId string) (model.LLMWeaknessLearningAdviceRequest, error)
+	WeaknessDetailedAnalysis(userId string, projectId string) (*model.DetailedAnalysisResult, error)
+	WeaknessLearningAdvice(userId string, projectId string, detailedAnalysis *model.DetailedAnalysisResult) (*model.PersonalizedAdvice, error)
 }
 
 type weaknessAnalysisService struct {
@@ -42,7 +44,10 @@ type weaknessAnalysisService struct {
 	questionTemplateMastersRepo  repository.QuestionTemplateMastersRepository
 	categoryMastersRepo          repository.CategoryMastersRepository
 	weaknessCategoryAnalysisRepo repository.WeaknessCategoryAnalysisRepository
+	weaknessDetailedAnalysisRepo repository.WeaknessDetailedAnalysisRepository
+	weaknessLearningAdviceRepo   repository.WeaknessLearningAdviceRepository
 	claudeClient                 anthropic.Client
+	prompts                      *config.WeaknessAnalysisPrompts
 }
 
 func NewWeaknessAnalysisService(
@@ -53,6 +58,8 @@ func NewWeaknessAnalysisService(
 	questionTemplateMastersRepo repository.QuestionTemplateMastersRepository,
 	categoryMastersRepo repository.CategoryMastersRepository,
 	weaknessCategoryAnalysisRepo repository.WeaknessCategoryAnalysisRepository,
+	weaknessDetailedAnalysisRepo repository.WeaknessDetailedAnalysisRepository,
+	weaknessLearningAdviceRepo repository.WeaknessLearningAdviceRepository,
 ) WeaknessAnalysisService {
 	apiKey := os.Getenv("CLAUDE_API_KEY")
 	if apiKey == "" {
@@ -69,7 +76,10 @@ func NewWeaknessAnalysisService(
 		questionTemplateMastersRepo:  questionTemplateMastersRepo,
 		categoryMastersRepo:          categoryMastersRepo,
 		weaknessCategoryAnalysisRepo: weaknessCategoryAnalysisRepo,
+		weaknessDetailedAnalysisRepo: weaknessDetailedAnalysisRepo,
+		weaknessLearningAdviceRepo:   weaknessLearningAdviceRepo,
 		claudeClient:                 claudeClient,
+		prompts:                      config.NewWeaknessAnalysisPrompts(),
 	}
 }
 
@@ -111,6 +121,8 @@ func (s *weaknessAnalysisService) CreateWeaknessAnalysis(userId string, req *mod
 	// 学習カテゴリ分析を作成する
 	categoryAnalysisResults, err := s.WeaknessCategoryAnalysis(userId, req.ProjectID)
 	if err != nil {
+		// エラー時はステータスをFAILEDに更新
+		s.repo.UpdateAnalysisStatus(weaknessAnalysis.ID, "FAILED")
 		tx.Rollback()
 		return nil, fmt.Errorf("カテゴリ分析の実行に失敗しました: %w", err)
 	}
@@ -118,26 +130,74 @@ func (s *weaknessAnalysisService) CreateWeaknessAnalysis(userId string, req *mod
 	// カテゴリ分析結果をパースしてデータベースに保存
 	err = s.saveCategoryAnalysisResults(userId, weaknessAnalysis.ID, req.ProjectID, categoryAnalysisResults)
 	if err != nil {
+		// エラー時はステータスをFAILEDに更新
+		s.repo.UpdateAnalysisStatus(weaknessAnalysis.ID, "FAILED")
 		tx.Rollback()
 		return nil, fmt.Errorf("カテゴリ分析結果の保存に失敗しました: %w", err)
 	}
 
 	// 詳細分析を作成する
-	// llmRequestsDetailedAnalysis, err := s.WeaknessDetailedAnalysis(userId, req.ProjectID)
-	// if err != nil {
-	// 	tx.Rollback()
-	// 	return nil, err
-	// }
-	// b, _ = json.MarshalIndent(llmRequestsDetailedAnalysis, "", "  ")
-	// fmt.Println(string(b))
+	detailedAnalysisResult, err := s.WeaknessDetailedAnalysis(userId, req.ProjectID)
+	if err != nil {
+		// エラー時はステータスをFAILEDに更新
+		s.repo.UpdateAnalysisStatus(weaknessAnalysis.ID, "FAILED")
+		tx.Rollback()
+		return nil, fmt.Errorf("詳細分析の実行に失敗しました: %w", err)
+	}
+
+	// 詳細分析結果をデータベースに保存
+	err = s.saveDetailedAnalysisResult(userId, weaknessAnalysis.ID, detailedAnalysisResult)
+	if err != nil {
+		// エラー時はステータスをFAILEDに更新
+		s.repo.UpdateAnalysisStatus(weaknessAnalysis.ID, "FAILED")
+		tx.Rollback()
+		return nil, fmt.Errorf("詳細分析結果の保存に失敗しました: %w", err)
+	}
 
 	// 学習アドバイスを作成する
+	learningAdviceResult, err := s.WeaknessLearningAdvice(userId, req.ProjectID, detailedAnalysisResult)
+	if err != nil {
+		// エラー時はステータスをFAILEDに更新
+		s.repo.UpdateAnalysisStatus(weaknessAnalysis.ID, "FAILED")
+		tx.Rollback()
+		return nil, fmt.Errorf("学習アドバイスの実行に失敗しました: %w", err)
+	}
+
+	// 学習アドバイス結果をデータベースに保存
+	err = s.saveLearningAdviceResult(userId, weaknessAnalysis.ID, learningAdviceResult)
+	if err != nil {
+		// エラー時はステータスをFAILEDに更新
+		s.repo.UpdateAnalysisStatus(weaknessAnalysis.ID, "FAILED")
+		tx.Rollback()
+		return nil, fmt.Errorf("学習アドバイス結果の保存に失敗しました: %w", err)
+	}
+
+	// 詳細分析結果から総合スコアを計算して更新
+	overallScore := s.calculateOverallScore(detailedAnalysisResult)
+	err = s.repo.UpdateOverallScore(weaknessAnalysis.ID, overallScore)
+	if err != nil {
+		// エラー時はステータスをFAILEDに更新
+		s.repo.UpdateAnalysisStatus(weaknessAnalysis.ID, "FAILED")
+		tx.Rollback()
+		return nil, fmt.Errorf("総合スコアの更新に失敗しました: %w", err)
+	}
+
+	// 全ての分析が完了したので、ステータスをCOMPLETEDに更新
+	err = s.repo.UpdateAnalysisStatus(weaknessAnalysis.ID, "COMPLETED")
+	if err != nil {
+		tx.Rollback()
+		return nil, fmt.Errorf("分析ステータスの更新に失敗しました: %w", err)
+	}
 
 	// トランザクションをコミット
 	if err := tx.Commit().Error; err != nil {
 		tx.Rollback()
 		return nil, fmt.Errorf("トランザクションのコミットに失敗しました: %w", err)
 	}
+
+	// レスポンスのステータスと総合スコアも更新
+	weaknessAnalysis.AnalysisStatus = "COMPLETED"
+	weaknessAnalysis.OverallScore = overallScore
 
 	return weaknessAnalysis, nil
 }
@@ -228,28 +288,7 @@ func (s *weaknessAnalysisService) WeaknessCategoryAnalysis(userId string, projec
 		fmt.Printf("Category %s jsonData %s\n", categoryName, string(categoryJsonData))
 
 		// プロンプト整形
-		prompt := `あなたはプロの英語教師です。
-以下の「` + categoryName + `」カテゴリの学習データを分析し、このカテゴリでの学習者の強み・弱みを分析してJSON形式で出力してください。
-
-【重要】以下の要件を厳密に守ってください：
-1. 出力は有効なJSON形式のみにしてください
-2. 説明文やマークダウン記法は一切含めないでください
-3. JSONの前後に余計な文字を入れないでください
-4. 配列が空の場合は空配列[]を使用してください
-
-出力JSON形式：
-{
-  "is_weakness": boolean,
-  "is_strength": boolean,
-  "issues": ["問題点1", "問題点2"],
-  "strengths": ["強み1", "強み2"],
-  "examples": ["具体例1", "具体例2"]
-}
-
-分析対象データ:
-` + string(categoryJsonData) + `
-
-上記データを分析し、有効なJSONのみを出力してください：`
+		prompt := s.prompts.GetCategoryAnalysisPrompt(categoryName, string(categoryJsonData))
 
 		// Claudeに分析リクエストを送信
 		msg, err := s.claudeClient.Messages.New(
@@ -277,7 +316,7 @@ func (s *weaknessAnalysisService) WeaknessCategoryAnalysis(userId string, projec
 		fmt.Printf("Category %s raw Claude output: %s\n", categoryName, output)
 
 		// JSONオブジェクトを抽出
-		jsonOutput, err := extractFirstJSONObject(output)
+		jsonOutput, err := utils.ExtractFirstJSONObject(output)
 		if err != nil {
 			fmt.Printf("Failed to extract JSON from Claude output（%s）: %s\n", categoryName, output)
 			return nil, fmt.Errorf("failed to extract JSON object from Claude output（%s）: %w", categoryName, err)
@@ -308,7 +347,7 @@ func (s *weaknessAnalysisService) WeaknessCategoryAnalysis(userId string, projec
 }
 
 // WeaknessDetailedAnalysis 詳細分析をLLMにて行う
-func (s *weaknessAnalysisService) WeaknessDetailedAnalysis(userId string, projectId string) ([]model.LLMWeaknessDetailedAnalysisRequest, error) {
+func (s *weaknessAnalysisService) WeaknessDetailedAnalysis(userId string, projectId string) (*model.DetailedAnalysisResult, error) {
 	// 解答データを取得
 	correctResults, err := s.correctResultsRepo.GetCorrectResults(&model.GetCorrectResultsRequest{ProjectID: projectId})
 	if err != nil {
@@ -348,34 +387,193 @@ func (s *weaknessAnalysisService) WeaknessDetailedAnalysis(userId string, projec
 		llmRequests = append(llmRequests, llmRequest)
 	}
 
-	return llmRequests, nil
+	// 学習データをJSON形式に変換
+	jsonData, err := json.MarshalIndent(llmRequests, "", "  ")
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal detailed analysis data: %w", err)
+	}
+
+	fmt.Println("Detailed Analysis jsonData:", string(jsonData))
+
+	// プロンプト整形
+	prompt := s.prompts.GetDetailedAnalysisPrompt(string(jsonData))
+
+	// Claudeに分析リクエストを送信
+	msg, err := s.claudeClient.Messages.New(
+		context.Background(),
+		anthropic.MessageNewParams{
+			Model:     anthropic.ModelClaude3_7Sonnet20250219,
+			MaxTokens: 8000,
+			Messages: []anthropic.MessageParam{
+				anthropic.NewUserMessage(
+					anthropic.NewTextBlock(prompt),
+				),
+			},
+		},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("Claudeによる詳細分析に失敗しました: %w", err)
+	}
+
+	// レスポンスをパース
+	var output string
+	for _, block := range msg.Content {
+		output += block.Text
+	}
+
+	fmt.Printf("Detailed Analysis raw Claude output: %s\n", output)
+
+	// JSONオブジェクトを抽出
+	jsonOutput, err := utils.ExtractFirstJSONObject(output)
+	if err != nil {
+		fmt.Printf("Failed to extract JSON from detailed analysis output: %s\n", output)
+		return nil, fmt.Errorf("failed to extract JSON object from detailed analysis output: %w", err)
+	}
+	fmt.Printf("Detailed Analysis extracted jsonOutput: %s\n", jsonOutput)
+
+	// JSONをパース
+	var detailedAnalysisResult model.DetailedAnalysisResult
+	if err := json.Unmarshal([]byte(jsonOutput), &detailedAnalysisResult); err != nil {
+		fmt.Printf("JSON unmarshal error for detailed analysis: %v\n", err)
+		fmt.Printf("Problematic JSON: %s\n", jsonOutput)
+
+		// フォールバック：デフォルト値を設定
+		fmt.Println("Using fallback default values for detailed analysis")
+		detailedAnalysisResult = model.DetailedAnalysisResult{
+			Grammar: model.AnalysisDetail{
+				Score:       50,
+				Description: "分析中にエラーが発生しました",
+				Examples:    []string{},
+			},
+			Vocabulary: model.AnalysisDetail{
+				Score:       50,
+				Description: "分析中にエラーが発生しました",
+				Examples:    []string{},
+			},
+			Expression: model.AnalysisDetail{
+				Score:       50,
+				Description: "分析中にエラーが発生しました",
+				Examples:    []string{},
+			},
+			Structure: model.AnalysisDetail{
+				Score:       50,
+				Description: "分析中にエラーが発生しました",
+				Examples:    []string{},
+			},
+		}
+	}
+
+	return &detailedAnalysisResult, nil
+}
+
+// calculateOverallScore 詳細分析結果から総合スコアを計算する
+func (s *weaknessAnalysisService) calculateOverallScore(detailedAnalysis *model.DetailedAnalysisResult) int {
+	// 4つの領域（文法・語彙・表現・構成）のスコアの平均を計算
+	totalScore := detailedAnalysis.Grammar.Score +
+		detailedAnalysis.Vocabulary.Score +
+		detailedAnalysis.Expression.Score +
+		detailedAnalysis.Structure.Score
+
+	overallScore := totalScore / 4
+
+	// 0-100の範囲に正規化
+	if overallScore < 0 {
+		overallScore = 0
+	} else if overallScore > 100 {
+		overallScore = 100
+	}
+
+	return overallScore
 }
 
 // WeaknessLearningAdvice 学習アドバイスをLLMにて行う
-func (s *weaknessAnalysisService) WeaknessLearningAdvice(userId string, projectId string) (model.LLMWeaknessLearningAdviceRequest, error) {
-	// 分析データを取得
-	var analysis model.WeaknessAnalysis
-	if err := s.db.Where("user_id = ? AND project_id = ?", userId, projectId).Order("created_at desc").First(&analysis).Error; err != nil {
-		return model.LLMWeaknessLearningAdviceRequest{}, fmt.Errorf("failed to get weakness analysis: %w", err)
+func (s *weaknessAnalysisService) WeaknessLearningAdvice(userId string, projectId string, detailedAnalysis *model.DetailedAnalysisResult) (*model.PersonalizedAdvice, error) {
+	// 詳細分析結果をJSON形式に変換
+	jsonData, err := json.MarshalIndent(detailedAnalysis, "", "  ")
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal detailed analysis data: %w", err)
 	}
 
-	// 詳細分析結果を取得
-	var detailedAnalysis model.WeaknessDetailedAnalysis
-	if err := s.db.Where("analysis_id = ?", analysis.ID).First(&detailedAnalysis).Error; err != nil {
-		return model.LLMWeaknessLearningAdviceRequest{}, fmt.Errorf("failed to get weakness detailed analysis: %w", err)
+	fmt.Println("Learning Advice jsonData:", string(jsonData))
+
+	// プロンプト整形
+	prompt := s.prompts.GetLearningAdvicePrompt(string(jsonData))
+
+	// Claudeに分析リクエストを送信
+	msg, err := s.claudeClient.Messages.New(
+		context.Background(),
+		anthropic.MessageNewParams{
+			Model:     anthropic.ModelClaude3_7Sonnet20250219,
+			MaxTokens: 8000,
+			Messages: []anthropic.MessageParam{
+				anthropic.NewUserMessage(
+					anthropic.NewTextBlock(prompt),
+				),
+			},
+		},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("Claudeによる学習アドバイス生成に失敗しました: %w", err)
 	}
 
-	// LLMリクエストを作成
-	llmRequest := model.LLMWeaknessLearningAdviceRequest{
-		GrammarScore:          detailedAnalysis.GrammarScore,
-		GrammarDescription:    detailedAnalysis.GrammarDescription,
-		VocabularyScore:       detailedAnalysis.VocabularyScore,
-		VocabularyDescription: detailedAnalysis.VocabularyDescription,
-		ExpressionScore:       detailedAnalysis.ExpressionScore,
-		ExpressionDescription: detailedAnalysis.ExpressionDescription,
+	// レスポンスをパース
+	var output string
+	for _, block := range msg.Content {
+		output += block.Text
 	}
 
-	return llmRequest, nil
+	fmt.Printf("Learning Advice raw Claude output: %s\n", output)
+
+	// JSONオブジェクトを抽出
+	jsonOutput, err := utils.ExtractFirstJSONObject(output)
+	if err != nil {
+		fmt.Printf("Failed to extract JSON from learning advice output: %s\n", output)
+		return nil, fmt.Errorf("failed to extract JSON object from learning advice output: %w", err)
+	}
+	fmt.Printf("Learning Advice extracted jsonOutput: %s\n", jsonOutput)
+
+	// JSONをパース
+	var learningAdviceResult model.PersonalizedAdvice
+	if err := json.Unmarshal([]byte(jsonOutput), &learningAdviceResult); err != nil {
+		fmt.Printf("JSON unmarshal error for learning advice: %v\n", err)
+		fmt.Printf("Problematic JSON: %s\n", jsonOutput)
+
+		// フォールバック：デフォルト値を設定
+		fmt.Println("Using fallback default values for learning advice")
+		learningAdviceResult = model.PersonalizedAdvice{
+			LearningAdvice:      "分析中にエラーが発生しました。基本的な英語学習を継続してください。",
+			RecommendedActions:  []string{"基本的な文法学習", "語彙力向上", "リーディング練習"},
+			NextGoals:           []string{"基礎力向上", "継続的な学習習慣の確立"},
+			StudyPlan:           "毎日30分の英語学習を継続し、基礎力を向上させましょう。",
+			MotivationalMessage: "継続は力なり。一歩ずつ着実に進歩していきましょう。",
+		}
+	}
+
+	return &learningAdviceResult, nil
+}
+
+// saveLearningAdviceResult 学習アドバイス結果をデータベースに保存する
+func (s *weaknessAnalysisService) saveLearningAdviceResult(userId string, analysisId string, result *model.PersonalizedAdvice) error {
+	// JSON配列を文字列に変換
+	recommendedActionsJSON, _ := json.Marshal(result.RecommendedActions)
+	nextGoalsJSON, _ := json.Marshal(result.NextGoals)
+
+	// データベースに保存
+	req := &model.CreateWeaknessLearningAdviceRequest{
+		AnalysisID:          analysisId,
+		LearningAdvice:      result.LearningAdvice,
+		RecommendedActions:  string(recommendedActionsJSON),
+		NextGoals:           string(nextGoalsJSON),
+		StudyPlan:           result.StudyPlan,
+		MotivationalMessage: result.MotivationalMessage,
+	}
+
+	_, err := s.weaknessLearningAdviceRepo.CreateWeaknessLearningAdvice(userId, req)
+	if err != nil {
+		return fmt.Errorf("学習アドバイス結果保存エラー: %w", err)
+	}
+
+	return nil
 }
 
 // saveCategoryAnalysisResults カテゴリ分析結果をデータベースに保存する
@@ -481,4 +679,37 @@ func (s *weaknessAnalysisService) calculateCategoryScore(projectId string, categ
 	}
 
 	return averageScore, nil
+}
+
+// saveDetailedAnalysisResult 詳細分析結果をデータベースに保存する
+func (s *weaknessAnalysisService) saveDetailedAnalysisResult(userId string, analysisId string, result *model.DetailedAnalysisResult) error {
+	// JSON配列を文字列に変換
+	grammarExamplesJSON, _ := json.Marshal(result.Grammar.Examples)
+	vocabularyExamplesJSON, _ := json.Marshal(result.Vocabulary.Examples)
+	expressionExamplesJSON, _ := json.Marshal(result.Expression.Examples)
+	structureExamplesJSON, _ := json.Marshal(result.Structure.Examples)
+
+	// データベースに保存
+	req := &model.CreateWeaknessDetailedAnalysisRequest{
+		AnalysisID:            analysisId,
+		GrammarScore:          result.Grammar.Score,
+		GrammarDescription:    result.Grammar.Description,
+		GrammarExamples:       string(grammarExamplesJSON),
+		VocabularyScore:       result.Vocabulary.Score,
+		VocabularyDescription: result.Vocabulary.Description,
+		VocabularyExamples:    string(vocabularyExamplesJSON),
+		ExpressionScore:       result.Expression.Score,
+		ExpressionDescription: result.Expression.Description,
+		ExpressionExamples:    string(expressionExamplesJSON),
+		StructureScore:        result.Structure.Score,
+		StructureDescription:  result.Structure.Description,
+		StructureExamples:     string(structureExamplesJSON),
+	}
+
+	_, err := s.weaknessDetailedAnalysisRepo.CreateWeaknessDetailedAnalysis(userId, req)
+	if err != nil {
+		return fmt.Errorf("詳細分析結果保存エラー: %w", err)
+	}
+
+	return nil
 }

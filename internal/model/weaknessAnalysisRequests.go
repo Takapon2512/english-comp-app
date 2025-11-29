@@ -16,6 +16,7 @@ type CreateWeaknessAnalysisResponse struct {
 	ID             string `json:"id"`              // 作成された分析レコードのID
 	ProjectID      string `json:"project_id"`      // 分析対象プロジェクトのID
 	AnalysisStatus string `json:"analysis_status"` // 分析処理の初期状態（通常は"PROCESSING"）
+	OverallScore   int    `json:"overall_score"`   // 総合学習スコア（0-100）
 }
 
 // GetWeaknessAnalysisRequest は分析結果取得リクエスト用構造体
@@ -32,32 +33,32 @@ type GetWeaknessAnalysisResponse struct {
 
 // UpdateWeaknessAnalysisRequest は学習弱点分析を更新するリクエスト用構造体
 type UpdateWeaknessAnalysisRequest struct {
-	ID string `json:"id" binding:"required"` // 更新対象の分析結果のID（必須）
-	ProjectID string `json:"project_id" binding:"required"` // 分析対象プロジェクトのID（必須）
-	AnalysisStatus string `json:"analysis_status" binding:"required"` // 分析処理状況（必須）
-	OverallScore int `json:"overall_score" binding:"required"` // 総合学習スコア（0-100）
-	ImprovementRate int `json:"improvement_rate" binding:"required"` // 前回からの改善率（-100〜+100）
-	AnalysisDate time.Time `json:"analysis_date" binding:"required"` // 分析実行日時
-	AnalyzedAnswers int `json:"analyzed_answers" binding:"required"` // 分析対象回答数
+	ID              string    `json:"id" binding:"required"`                // 更新対象の分析結果のID（必須）
+	ProjectID       string    `json:"project_id" binding:"required"`        // 分析対象プロジェクトのID（必須）
+	AnalysisStatus  string    `json:"analysis_status" binding:"required"`   // 分析処理状況（必須）
+	OverallScore    int       `json:"overall_score" binding:"required"`     // 総合学習スコア（0-100）
+	ImprovementRate int       `json:"improvement_rate" binding:"required"`  // 前回からの改善率（-100〜+100）
+	AnalysisDate    time.Time `json:"analysis_date" binding:"required"`     // 分析実行日時
+	AnalyzedAnswers int       `json:"analyzed_answers" binding:"required"`  // 分析対象回答数
 	DataPeriodStart time.Time `json:"data_period_start" binding:"required"` // 分析対象期間の開始日
-	DataPeriodEnd time.Time `json:"data_period_end" binding:"required"` // 分析対象期間の終了日
-	LLMModel string `json:"llm_model" binding:"required"` // 使用したLLMモデル名
-	AnalysisVersion string `json:"analysis_version" binding:"required"` // 分析ロジックのバージョン
+	DataPeriodEnd   time.Time `json:"data_period_end" binding:"required"`   // 分析対象期間の終了日
+	LLMModel        string    `json:"llm_model" binding:"required"`         // 使用したLLMモデル名
+	AnalysisVersion string    `json:"analysis_version" binding:"required"`  // 分析ロジックのバージョン
 }
 
 // UpdateWeaknessAnalysisResponse は学習弱点分析を更新するレスポンス用構造体
 type UpdateWeaknessAnalysisResponse struct {
-	ID string `json:"id"` // 更新された分析結果のID
-	ProjectID string `json:"project_id"` // 分析対象プロジェクトのID
-	AnalysisStatus string `json:"analysis_status"` // 分析処理状況
-	OverallScore int `json:"overall_score"` // 総合学習スコア（0-100）
-	ImprovementRate int `json:"improvement_rate"` // 前回からの改善率（-100〜+100）
-	AnalysisDate time.Time `json:"analysis_date"` // 分析実行日時
-	AnalyzedAnswers int `json:"analyzed_answers"` // 分析対象回答数
+	ID              string    `json:"id"`                // 更新された分析結果のID
+	ProjectID       string    `json:"project_id"`        // 分析対象プロジェクトのID
+	AnalysisStatus  string    `json:"analysis_status"`   // 分析処理状況
+	OverallScore    int       `json:"overall_score"`     // 総合学習スコア（0-100）
+	ImprovementRate int       `json:"improvement_rate"`  // 前回からの改善率（-100〜+100）
+	AnalysisDate    time.Time `json:"analysis_date"`     // 分析実行日時
+	AnalyzedAnswers int       `json:"analyzed_answers"`  // 分析対象回答数
 	DataPeriodStart time.Time `json:"data_period_start"` // 分析対象期間の開始日
-	DataPeriodEnd time.Time `json:"data_period_end"` // 分析対象期間の終了日
-	LLMModel string `json:"llm_model"` // 使用したLLMモデル名
-	AnalysisVersion string `json:"analysis_version"` // 分析ロジックのバージョン
+	DataPeriodEnd   time.Time `json:"data_period_end"`   // 分析対象期間の終了日
+	LLMModel        string    `json:"llm_model"`         // 使用したLLMモデル名
+	AnalysisVersion string    `json:"analysis_version"`  // 分析ロジックのバージョン
 }
 
 // ===== サマリー構造体（クライアント向け） =====

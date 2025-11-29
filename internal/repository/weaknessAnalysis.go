@@ -15,6 +15,8 @@ import (
 type WeaknessAnalysisRepository interface {
 	CreateWeaknessAnalysis(userId string, req *model.CreateWeaknessAnalysisRequest) (*model.CreateWeaknessAnalysisResponse, error)
 	GetWeaknessAnalysis(userId string, req *model.GetWeaknessAnalysisRequest) (*model.GetWeaknessAnalysisResponse, error)
+	UpdateAnalysisStatus(analysisId string, status string) error
+	UpdateOverallScore(analysisId string, overallScore int) error
 }
 
 type weaknessAnalysisRepository struct {
@@ -59,6 +61,7 @@ func (r *weaknessAnalysisRepository) CreateWeaknessAnalysis(userId string, req *
 		ID:             weaknessAnalysis.ID,
 		ProjectID:      weaknessAnalysis.ProjectID,
 		AnalysisStatus: weaknessAnalysis.AnalysisStatus,
+		OverallScore:   weaknessAnalysis.OverallScore,
 	}
 
 	return response, nil
@@ -126,4 +129,48 @@ func (r *weaknessAnalysisRepository) GetWeaknessAnalysis(userId string, req *mod
 			DataPeriodEnd:   weaknessAnalysis.DataPeriodEnd,
 		},
 	}, nil
+}
+
+// UpdateAnalysisStatus 分析ステータスを更新する
+func (r *weaknessAnalysisRepository) UpdateAnalysisStatus(analysisId string, status string) error {
+	now := time.Now()
+
+	result := r.db.Model(&model.WeaknessAnalysis{}).
+		Where("id = ?", analysisId).
+		Updates(map[string]interface{}{
+			"analysis_status": status,
+			"updated_at":      now,
+		})
+
+	if result.Error != nil {
+		return fmt.Errorf("failed to update analysis status: %w", result.Error)
+	}
+
+	if result.RowsAffected == 0 {
+		return fmt.Errorf("analysis not found with id: %s", analysisId)
+	}
+
+	return nil
+}
+
+// UpdateOverallScore 総合スコアを更新する
+func (r *weaknessAnalysisRepository) UpdateOverallScore(analysisId string, overallScore int) error {
+	now := time.Now()
+
+	result := r.db.Model(&model.WeaknessAnalysis{}).
+		Where("id = ?", analysisId).
+		Updates(map[string]interface{}{
+			"overall_score": overallScore,
+			"updated_at":    now,
+		})
+
+	if result.Error != nil {
+		return fmt.Errorf("failed to update overall score: %w", result.Error)
+	}
+
+	if result.RowsAffected == 0 {
+		return fmt.Errorf("analysis not found with id: %s", analysisId)
+	}
+
+	return nil
 }

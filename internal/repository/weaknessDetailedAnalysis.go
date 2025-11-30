@@ -13,6 +13,7 @@ import (
 type WeaknessDetailedAnalysisRepository interface {
 	CreateWeaknessDetailedAnalysis(userId string, req *model.CreateWeaknessDetailedAnalysisRequest) (*model.CreateWeaknessDetailedAnalysisResponse, error)
 	GetWeaknessDetailedAnalysis(analysisId string) (*model.WeaknessDetailedAnalysisSummary, error)
+	UpdateWeaknessDetailedAnalysis(userId string, req *model.UpdateWeaknessDetailedAnalysisRequest) (*model.UpdateWeaknessDetailedAnalysisResponse, error)
 }
 
 type weaknessDetailedAnalysisRepository struct {
@@ -64,6 +65,51 @@ func (r *weaknessDetailedAnalysisRepository) CreateWeaknessDetailedAnalysis(user
 		ExpressionScore:       weaknessDetailedAnalysis.ExpressionScore,
 		ExpressionDescription: weaknessDetailedAnalysis.ExpressionDescription,
 		ExpressionExamples:    weaknessDetailedAnalysis.ExpressionExamples,
+	}, nil
+}
+
+// UpdateWeaknessDetailedAnalysis 詳細分析結果を更新する
+func (r *weaknessDetailedAnalysisRepository) UpdateWeaknessDetailedAnalysis(userId string, req *model.UpdateWeaknessDetailedAnalysisRequest) (*model.UpdateWeaknessDetailedAnalysisResponse, error) {
+	now := time.Now()
+
+	weaknessDetailedAnalysis := &model.WeaknessDetailedAnalysis{
+		ID:                    req.ID,
+		AnalysisID:            req.AnalysisID,
+		GrammarScore:          req.GrammarScore,
+		GrammarDescription:    req.GrammarDescription,
+		GrammarExamples:       req.GrammarExamples,
+		VocabularyScore:       req.VocabularyScore,
+		VocabularyDescription: req.VocabularyDescription,
+		VocabularyExamples:    req.VocabularyExamples,
+		ExpressionScore:       req.ExpressionScore,
+		ExpressionDescription: req.ExpressionDescription,
+		ExpressionExamples:    req.ExpressionExamples,
+		StructureScore:        req.StructureScore,
+		StructureDescription:  req.StructureDescription,
+		StructureExamples:     req.StructureExamples,
+		UpdatedAt:             now,
+		UpdatedBy:             userId,
+	}
+
+	if err := r.db.Save(weaknessDetailedAnalysis).Error; err != nil {
+		return nil, fmt.Errorf("failed to update weakness detailed analysis: %w", err)
+	}
+
+	return &model.UpdateWeaknessDetailedAnalysisResponse{
+		ID:                    weaknessDetailedAnalysis.ID,
+		AnalysisID:            weaknessDetailedAnalysis.AnalysisID,
+		GrammarScore:          weaknessDetailedAnalysis.GrammarScore,
+		GrammarDescription:    weaknessDetailedAnalysis.GrammarDescription,
+		GrammarExamples:       weaknessDetailedAnalysis.GrammarExamples,
+		VocabularyScore:       weaknessDetailedAnalysis.VocabularyScore,
+		VocabularyDescription: weaknessDetailedAnalysis.VocabularyDescription,
+		VocabularyExamples:    weaknessDetailedAnalysis.VocabularyExamples,
+		ExpressionScore:       weaknessDetailedAnalysis.ExpressionScore,
+		ExpressionDescription: weaknessDetailedAnalysis.ExpressionDescription,
+		ExpressionExamples:    weaknessDetailedAnalysis.ExpressionExamples,
+		StructureScore:        weaknessDetailedAnalysis.StructureScore,
+		StructureDescription:  weaknessDetailedAnalysis.StructureDescription,
+		StructureExamples:     weaknessDetailedAnalysis.StructureExamples,
 	}, nil
 }
 

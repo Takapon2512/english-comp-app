@@ -13,6 +13,7 @@ import (
 type WeaknessLearningAdviceRepository interface {
 	CreateWeaknessLearningAdvice(userId string, req *model.CreateWeaknessLearningAdviceRequest) (*model.CreateWeaknessLearningAdviceResponse, error)
 	GetWeaknessLearningAdvice(analysisId string) (*model.WeaknessLearningAdviceSummary, error)
+	UpdateWeaknessLearningAdvice(userId string, req *model.UpdateWeaknessLearningAdviceRequest) (*model.UpdateWeaknessLearningAdviceResponse, error)
 }
 
 type weaknessLearningAdviceRepository struct {
@@ -66,6 +67,37 @@ func (r *weaknessLearningAdviceRepository) GetWeaknessLearningAdvice(analysisId 
 	}
 
 	return &model.WeaknessLearningAdviceSummary{
+		ID:                  weaknessLearningAdvice.ID,
+		AnalysisID:          weaknessLearningAdvice.AnalysisID,
+		LearningAdvice:      weaknessLearningAdvice.LearningAdvice,
+		RecommendedActions:  weaknessLearningAdvice.RecommendedActions,
+		NextGoals:           weaknessLearningAdvice.NextGoals,
+		StudyPlan:           weaknessLearningAdvice.StudyPlan,
+		MotivationalMessage: weaknessLearningAdvice.MotivationalMessage,
+	}, nil
+}
+
+// UpdateWeaknessLearningAdvice 学習アドバイスを更新する
+func (r *weaknessLearningAdviceRepository) UpdateWeaknessLearningAdvice(userId string, req *model.UpdateWeaknessLearningAdviceRequest) (*model.UpdateWeaknessLearningAdviceResponse, error) {
+	now := time.Now()
+
+	weaknessLearningAdvice := &model.WeaknessLearningAdvice{
+		ID:                    req.ID,
+		AnalysisID:            req.AnalysisID,
+		LearningAdvice:      req.LearningAdvice,
+		RecommendedActions:  req.RecommendedActions,
+		NextGoals:           req.NextGoals,
+		StudyPlan:           req.StudyPlan,
+		MotivationalMessage: req.MotivationalMessage,
+		UpdatedAt:           now,
+		UpdatedBy:           userId,
+	}
+
+	if err := r.db.Save(weaknessLearningAdvice).Error; err != nil {
+		return nil, fmt.Errorf("failed to update weakness learning advice: %w", err)
+	}
+
+	return &model.UpdateWeaknessLearningAdviceResponse{
 		ID:                  weaknessLearningAdvice.ID,
 		AnalysisID:          weaknessLearningAdvice.AnalysisID,
 		LearningAdvice:      weaknessLearningAdvice.LearningAdvice,

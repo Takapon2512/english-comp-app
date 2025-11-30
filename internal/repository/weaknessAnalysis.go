@@ -15,6 +15,7 @@ import (
 type WeaknessAnalysisRepository interface {
 	CreateWeaknessAnalysis(userId string, req *model.CreateWeaknessAnalysisRequest) (*model.CreateWeaknessAnalysisResponse, error)
 	GetWeaknessAnalysis(userId string, req *model.GetWeaknessAnalysisRequest) (*model.GetWeaknessAnalysisResponse, error)
+	GetWeaknessAnalysisStatusSummary(userId string, analysisId string) (*model.WeaknessAnalysisStatusSummary, error)
 	UpdateAnalysisStatus(analysisId string, status string) error
 	UpdateOverallScore(analysisId string, overallScore int) error
 }
@@ -173,4 +174,23 @@ func (r *weaknessAnalysisRepository) UpdateOverallScore(analysisId string, overa
 	}
 
 	return nil
+}
+
+// GetWeaknessAnalysisStatusSummary 分析状況のサマリーを取得する
+func (r *weaknessAnalysisRepository) GetWeaknessAnalysisStatusSummary(userId string, analysisId string) (*model.WeaknessAnalysisStatusSummary, error) {
+	var weaknessAnalysis model.WeaknessAnalysis
+
+	if err := r.db.Where("user_id = ? AND id = ?", userId, analysisId).First(&weaknessAnalysis).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil // レコードが見つからない場合はnilを返す
+		}
+		return nil, fmt.Errorf("failed to get weakness analysis status summary: %w", err)
+	}
+
+	return &model.WeaknessAnalysisStatusSummary{
+		ID:             weaknessAnalysis.ID,
+		ProjectID:      weaknessAnalysis.ProjectID,
+		UserID:         weaknessAnalysis.UserID,
+		AnalysisStatus: weaknessAnalysis.AnalysisStatus,
+	}, nil
 }

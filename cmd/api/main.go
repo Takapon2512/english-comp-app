@@ -165,6 +165,8 @@ func main() {
 		// 弱点分析テーブルを作成+LLMによる分析を行う
 		api.POST("/weakness-analysis/create-analysis", weaknessAnalysisHandler.CreateWeaknessAnalysis)
 		api.GET("/weakness-analysis/all-summary/:project_id", weaknessAnalysisHandler.GetWeaknessAnalysisAllSummary)
+		api.GET("/weakness-analysis/status-summary/:analysis_id", weaknessAnalysisHandler.GetWeaknessAnalysisStatusSummary)
+		api.PUT("/weakness-analysis/update-analysis", weaknessAnalysisHandler.UpdateWeaknessAnalysis)
 	}
 
 	// サーバーの起動

@@ -36,6 +36,8 @@ type WeaknessAnalysisService interface {
 	WeaknessLearningAdvice(userId string, projectId string, detailedAnalysis *model.DetailedAnalysisResult) (*model.PersonalizedAdvice, error)
 
 	GetWeaknessAnalysisAllSummary(userId string, projectId string) (*model.WeaknessAnalysisAllSummary, error)
+	UpdateWeaknessAnalysis(userId string, req *model.UpdateWeaknessAnalysisRequestService) (*model.WeaknessAnalysisAllSummary, error)
+	GetWeaknessAnalysisStatusSummary(userId string, analysisId string) (*model.WeaknessAnalysisStatusSummary, error)
 }
 
 type weaknessAnalysisService struct {
@@ -202,6 +204,125 @@ func (s *weaknessAnalysisService) CreateWeaknessAnalysis(userId string, req *mod
 	weaknessAnalysis.OverallScore = overallScore
 
 	return weaknessAnalysis, nil
+}
+
+// UpdateWeaknessAnalysis 学習弱点分析を再分析して更新する
+func (s *weaknessAnalysisService) UpdateWeaknessAnalysis(userId string, req *model.UpdateWeaknessAnalysisRequestService) (*model.WeaknessAnalysisAllSummary, error) {
+	// トランザクション開始
+	tx := s.db.Begin()
+	if tx.Error != nil {
+		return nil, fmt.Errorf("トランザクション開始に失敗しました: %w", tx.Error)
+	}
+
+	// エラー時のロールバック処理
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			panic(r)
+		}
+	}()
+
+	// 既存の分析結果を取得して存在確認
+	existingAnalysis, err := s.repo.GetWeaknessAnalysis(userId, &model.GetWeaknessAnalysisRequest{ProjectID: req.ProjectID})
+	if err != nil {
+		tx.Rollback()
+		return nil, fmt.Errorf("既存の分析結果の取得に失敗しました: %w", err)
+	}
+	if existingAnalysis == nil {
+		tx.Rollback()
+		return nil, fmt.Errorf("更新対象の分析結果が見つかりません")
+	}
+
+	// 分析ステータスをPROCESSINGに更新
+	err = s.repo.UpdateAnalysisStatus(existingAnalysis.Analysis.ID, "PROCESSING")
+	if err != nil {
+		tx.Rollback()
+		return nil, fmt.Errorf("分析ステータスの更新に失敗しました: %w", err)
+	}
+
+	// 1. カテゴリ分析を再実行
+	categoryAnalysisResults, err := s.WeaknessCategoryAnalysis(userId, req.ProjectID)
+	if err != nil {
+		// エラー時はステータスをFAILEDに更新
+		s.repo.UpdateAnalysisStatus(existingAnalysis.Analysis.ID, "FAILED")
+		tx.Rollback()
+		return nil, fmt.Errorf("カテゴリ分析の再実行に失敗しました: %w", err)
+	}
+
+	// カテゴリ分析結果を更新
+	err = s.updateCategoryAnalysisResults(userId, existingAnalysis.Analysis.ID, req.ProjectID, categoryAnalysisResults)
+	if err != nil {
+		// エラー時はステータスをFAILEDに更新
+		s.repo.UpdateAnalysisStatus(existingAnalysis.Analysis.ID, "FAILED")
+		tx.Rollback()
+		return nil, fmt.Errorf("カテゴリ分析結果の更新に失敗しました: %w", err)
+	}
+
+	// 2. 詳細分析を再実行
+	detailedAnalysisResult, err := s.WeaknessDetailedAnalysis(userId, req.ProjectID)
+	if err != nil {
+		// エラー時はステータスをFAILEDに更新
+		s.repo.UpdateAnalysisStatus(existingAnalysis.Analysis.ID, "FAILED")
+		tx.Rollback()
+		return nil, fmt.Errorf("詳細分析の再実行に失敗しました: %w", err)
+	}
+
+	// 詳細分析結果を更新
+	err = s.updateDetailedAnalysisResult(userId, existingAnalysis.Analysis.ID, detailedAnalysisResult)
+	if err != nil {
+		// エラー時はステータスをFAILEDに更新
+		s.repo.UpdateAnalysisStatus(existingAnalysis.Analysis.ID, "FAILED")
+		tx.Rollback()
+		return nil, fmt.Errorf("詳細分析結果の更新に失敗しました: %w", err)
+	}
+
+	// 3. 学習アドバイスを再実行
+	learningAdviceResult, err := s.WeaknessLearningAdvice(userId, req.ProjectID, detailedAnalysisResult)
+	if err != nil {
+		// エラー時はステータスをFAILEDに更新
+		s.repo.UpdateAnalysisStatus(existingAnalysis.Analysis.ID, "FAILED")
+		tx.Rollback()
+		return nil, fmt.Errorf("学習アドバイスの再実行に失敗しました: %w", err)
+	}
+
+	// 学習アドバイス結果を更新
+	err = s.updateLearningAdviceResult(userId, existingAnalysis.Analysis.ID, learningAdviceResult)
+	if err != nil {
+		// エラー時はステータスをFAILEDに更新
+		s.repo.UpdateAnalysisStatus(existingAnalysis.Analysis.ID, "FAILED")
+		tx.Rollback()
+		return nil, fmt.Errorf("学習アドバイス結果の更新に失敗しました: %w", err)
+	}
+
+	// 4. 詳細分析結果から総合スコアを再計算して更新
+	overallScore := s.calculateOverallScore(detailedAnalysisResult)
+	err = s.repo.UpdateOverallScore(existingAnalysis.Analysis.ID, overallScore)
+	if err != nil {
+		// エラー時はステータスをFAILEDに更新
+		s.repo.UpdateAnalysisStatus(existingAnalysis.Analysis.ID, "FAILED")
+		tx.Rollback()
+		return nil, fmt.Errorf("総合スコアの更新に失敗しました: %w", err)
+	}
+
+	// 全ての再分析が完了したので、ステータスをCOMPLETEDに更新
+	err = s.repo.UpdateAnalysisStatus(existingAnalysis.Analysis.ID, "COMPLETED")
+	if err != nil {
+		tx.Rollback()
+		return nil, fmt.Errorf("分析ステータスの最終更新に失敗しました: %w", err)
+	}
+
+	// トランザクションをコミット
+	if err := tx.Commit().Error; err != nil {
+		return nil, fmt.Errorf("トランザクションのコミットに失敗しました: %w", err)
+	}
+
+	// 更新された分析結果を取得して返す
+	updatedAnalysis, err := s.GetWeaknessAnalysisAllSummary(userId, req.ProjectID)
+	if err != nil {
+		return nil, fmt.Errorf("更新された分析結果の取得に失敗しました: %w", err)
+	}
+
+	return updatedAnalysis, nil
 }
 
 // GetWeaknessAnalysis 学習弱点分析を取得する
@@ -726,11 +847,11 @@ func (s *weaknessAnalysisService) GetWeaknessAnalysisAllSummary(userId string, p
 		return nil, fmt.Errorf("分析結果が見つかりません")
 	}
 
-	weaknessCategoryAnalysisSummary, err := s.weaknessCategoryAnalysisRepo.GetWeaknessCategoryAnalysis(weaknessAnalysisSummary.Analysis.ID)
+	weaknessCategoryAnalysisSummaries, err := s.weaknessCategoryAnalysisRepo.GetWeaknessCategoryAnalysis(weaknessAnalysisSummary.Analysis.ID)
 	if err != nil {
 		return nil, fmt.Errorf("カテゴリ分析結果取得エラー: %w", err)
 	}
-	if weaknessCategoryAnalysisSummary == nil {
+	if len(weaknessCategoryAnalysisSummaries) == 0 {
 		return nil, fmt.Errorf("カテゴリ分析結果が見つかりません")
 	}
 
@@ -750,10 +871,205 @@ func (s *weaknessAnalysisService) GetWeaknessAnalysisAllSummary(userId string, p
 		return nil, fmt.Errorf("学習アドバイス結果が見つかりません")
 	}
 
+	// スライスをデリファレンス
+	categoryResponses := make([]model.WeaknessCategoryAnalysisResponse, len(weaknessCategoryAnalysisSummaries))
+	for i, summary := range weaknessCategoryAnalysisSummaries {
+		categoryResponses[i] = *summary
+	}
+
 	return &model.WeaknessAnalysisAllSummary{
 		WeaknessAnalysisSummary:         weaknessAnalysisSummary.Analysis,
-		WeaknessCategoryAnalysisSummary: []model.WeaknessCategoryAnalysisResponse{*weaknessCategoryAnalysisSummary},
+		WeaknessCategoryAnalysisSummary: categoryResponses,
 		WeaknessDetailedAnalysisSummary: *weaknessDetailedAnalysisSummary,
 		WeaknessLearningAdviceSummary:   *weaknessLearningAdviceSummary,
 	}, nil
+}
+
+// updateCategoryAnalysisResults カテゴリ分析結果を更新する
+func (s *weaknessAnalysisService) updateCategoryAnalysisResults(userId string, analysisId string, projectId string, results map[string]*CategoryAnalysisResult) error {
+	// 既存のカテゴリ分析結果を全て取得
+	existingCategoryAnalyses, err := s.weaknessCategoryAnalysisRepo.GetWeaknessCategoryAnalysis(analysisId)
+	if err != nil {
+		return fmt.Errorf("既存のカテゴリ分析結果取得エラー: %w", err)
+	}
+
+	// カテゴリ名でマッピングを作成
+	existingCategoryMap := make(map[string]*model.WeaknessCategoryAnalysisResponse)
+	for _, analysis := range existingCategoryAnalyses {
+		existingCategoryMap[analysis.CategoryName] = analysis
+	}
+
+	for categoryName, result := range results {
+		// カテゴリIDを取得（カテゴリ名から検索）
+		categoryMaster, err := s.categoryMastersRepo.GetCategoryMastersByName(categoryName)
+		if err != nil {
+			return fmt.Errorf("カテゴリマスター取得エラー（%s）: %w", categoryName, err)
+		}
+		if categoryMaster == nil {
+			return fmt.Errorf("カテゴリマスターが見つかりません: %s", categoryName)
+		}
+
+		// 既存の分析結果を取得
+		existingCategoryAnalysis, exists := existingCategoryMap[categoryName]
+		if !exists {
+			return fmt.Errorf("既存のカテゴリ分析結果が見つかりません: %s", categoryName)
+		}
+
+		// カテゴリごとのスコアを計算（correction_resultsテーブルのデータに基づく）
+		score, err := s.calculateCategoryScore(projectId, categoryMaster.CategoryMasters.ID)
+		if err != nil {
+			fmt.Printf("カテゴリ %s のスコア計算でエラー: %v\n", categoryName, err)
+			// エラーの場合はデフォルト値を使用
+			score = 50
+		}
+
+		// スコアに基づいて強み・弱みの判定を調整
+		if score >= 80 && !result.IsStrength {
+			fmt.Printf("カテゴリ %s: スコア %d に基づいて強みに調整\n", categoryName, score)
+			result.IsStrength = true
+			result.IsWeakness = false
+		} else if score <= 40 && !result.IsWeakness {
+			fmt.Printf("カテゴリ %s: スコア %d に基づいて弱みに調整\n", categoryName, score)
+			result.IsWeakness = true
+			result.IsStrength = false
+		}
+
+		// JSON配列に変換
+		issuesJSON, err := json.Marshal(result.Issues)
+		if err != nil {
+			return fmt.Errorf("Issues配列のJSON変換エラー: %w", err)
+		}
+
+		strengthsJSON, err := json.Marshal(result.Strengths)
+		if err != nil {
+			return fmt.Errorf("Strengths配列のJSON変換エラー: %w", err)
+		}
+
+		examplesJSON, err := json.Marshal(result.Examples)
+		if err != nil {
+			return fmt.Errorf("Examples配列のJSON変換エラー: %w", err)
+		}
+
+		// 更新リクエストを作成
+		updateReq := &model.UpdateWeaknessCategoryAnalysisRequest{
+			ID:           existingCategoryAnalysis.ID,
+			AnalysisID:   analysisId,
+			CategoryID:   categoryMaster.CategoryMasters.ID,
+			CategoryName: categoryName,
+			Score:        score,
+			IsWeakness:   result.IsWeakness,
+			IsStrength:   result.IsStrength,
+			Issues:       string(issuesJSON),
+			Strengths:    string(strengthsJSON),
+			Examples:     string(examplesJSON),
+		}
+
+		// カテゴリ分析結果を更新
+		_, err = s.weaknessCategoryAnalysisRepo.UpdateWeaknessCategoryAnalysis(userId, updateReq)
+		if err != nil {
+			return fmt.Errorf("カテゴリ分析結果更新エラー（%s）: %w", categoryName, err)
+		}
+	}
+
+	return nil
+}
+
+// updateDetailedAnalysisResult 詳細分析結果を更新する
+func (s *weaknessAnalysisService) updateDetailedAnalysisResult(userId string, analysisId string, result *model.DetailedAnalysisResult) error {
+	// 既存の詳細分析結果を取得
+	existingDetailedAnalysis, err := s.weaknessDetailedAnalysisRepo.GetWeaknessDetailedAnalysis(analysisId)
+	if err != nil {
+		return fmt.Errorf("既存の詳細分析結果取得エラー: %w", err)
+	}
+
+	// JSON配列に変換
+	grammarExamplesJSON, err := json.Marshal(result.Grammar.Examples)
+	if err != nil {
+		return fmt.Errorf("Grammar Examples配列のJSON変換エラー: %w", err)
+	}
+
+	vocabularyExamplesJSON, err := json.Marshal(result.Vocabulary.Examples)
+	if err != nil {
+		return fmt.Errorf("Vocabulary Examples配列のJSON変換エラー: %w", err)
+	}
+
+	expressionExamplesJSON, err := json.Marshal(result.Expression.Examples)
+	if err != nil {
+		return fmt.Errorf("Expression Examples配列のJSON変換エラー: %w", err)
+	}
+
+	structureExamplesJSON, err := json.Marshal(result.Structure.Examples)
+	if err != nil {
+		return fmt.Errorf("Structure Examples配列のJSON変換エラー: %w", err)
+	}
+
+	// 更新リクエストを作成
+	updateReq := &model.UpdateWeaknessDetailedAnalysisRequest{
+		ID:                    existingDetailedAnalysis.ID,
+		AnalysisID:            analysisId,
+		GrammarScore:          result.Grammar.Score,
+		GrammarDescription:    result.Grammar.Description,
+		GrammarExamples:       string(grammarExamplesJSON),
+		VocabularyScore:       result.Vocabulary.Score,
+		VocabularyDescription: result.Vocabulary.Description,
+		VocabularyExamples:    string(vocabularyExamplesJSON),
+		ExpressionScore:       result.Expression.Score,
+		ExpressionDescription: result.Expression.Description,
+		ExpressionExamples:    string(expressionExamplesJSON),
+		StructureScore:        result.Structure.Score,
+		StructureDescription:  result.Structure.Description,
+		StructureExamples:     string(structureExamplesJSON),
+	}
+
+	// 詳細分析結果を更新
+	_, err = s.weaknessDetailedAnalysisRepo.UpdateWeaknessDetailedAnalysis(userId, updateReq)
+	if err != nil {
+		return fmt.Errorf("詳細分析結果更新エラー: %w", err)
+	}
+
+	return nil
+}
+
+// updateLearningAdviceResult 学習アドバイス結果を更新する
+func (s *weaknessAnalysisService) updateLearningAdviceResult(userId string, analysisId string, result *model.PersonalizedAdvice) error {
+	// 既存の学習アドバイス結果を取得
+	existingLearningAdvice, err := s.weaknessLearningAdviceRepo.GetWeaknessLearningAdvice(analysisId)
+	if err != nil {
+		return fmt.Errorf("既存の学習アドバイス結果取得エラー: %w", err)
+	}
+
+	// JSON配列に変換
+	recommendedActionsJSON, err := json.Marshal(result.RecommendedActions)
+	if err != nil {
+		return fmt.Errorf("RecommendedActions配列のJSON変換エラー: %w", err)
+	}
+
+	nextGoalsJSON, err := json.Marshal(result.NextGoals)
+	if err != nil {
+		return fmt.Errorf("NextGoals配列のJSON変換エラー: %w", err)
+	}
+
+	// 更新リクエストを作成
+	updateReq := &model.UpdateWeaknessLearningAdviceRequest{
+		ID:                  existingLearningAdvice.ID,
+		AnalysisID:          analysisId,
+		LearningAdvice:      result.LearningAdvice,
+		RecommendedActions:  string(recommendedActionsJSON),
+		NextGoals:           string(nextGoalsJSON),
+		StudyPlan:           result.StudyPlan,
+		MotivationalMessage: result.MotivationalMessage,
+	}
+
+	// 学習アドバイス結果を更新
+	_, err = s.weaknessLearningAdviceRepo.UpdateWeaknessLearningAdvice(userId, updateReq)
+	if err != nil {
+		return fmt.Errorf("学習アドバイス結果更新エラー: %w", err)
+	}
+
+	return nil
+}
+
+// GetWeaknessAnalysisStatusSummary 分析状況のサマリーを取得する
+func (s *weaknessAnalysisService) GetWeaknessAnalysisStatusSummary(userId string, analysisId string) (*model.WeaknessAnalysisStatusSummary, error) {
+	return s.repo.GetWeaknessAnalysisStatusSummary(userId, analysisId)
 }

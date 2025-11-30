@@ -66,9 +66,31 @@ type CreateWeaknessLearningAdviceRequest struct {
 	MotivationalMessage   string `json:"motivational_message"` // モチベーション向上メッセージ（励ましや成長の認識）
 }
 
+// UpdateWeaknessLearningAdviceRequest は学習アドバイスを更新するリクエスト用構造体
+type UpdateWeaknessLearningAdviceRequest struct {
+	ID                    string `json:"id" binding:"required"`                    // 更新対象の学習アドバイスレコードのID（必須）
+	AnalysisID            string `json:"analysis_id" binding:"required"`            // 親分析レコードのID（必須）
+	LearningAdvice        string `json:"learning_advice"` // 個別学習アドバイス（具体的な学習方法や注意点）
+	RecommendedActions    string `json:"recommended_actions"` // 推奨アクションのJSON配列（具体的な学習行動の提案）
+	NextGoals             string `json:"next_goals"` // 次の学習目標のJSON配列（短期・中期目標の設定）
+	StudyPlan             string `json:"study_plan"` // 個別学習プラン（期間、内容、方法を含む詳細プラン）
+	MotivationalMessage   string `json:"motivational_message"` // モチベーション向上メッセージ（励ましや成長の認識）
+}
+
 // CreateWeaknessLearningAdviceResponse は学習アドバイスを作成するレスポンス用構造体
 type CreateWeaknessLearningAdviceResponse struct {
 	ID 						string `json:"id"` // 作成された学習アドバイスレコードのID
+	AnalysisID 				string `json:"analysis_id"` // 親分析レコードのID
+	LearningAdvice 			string `json:"learning_advice"` // 個別学習アドバイス（具体的な学習方法や注意点）
+	RecommendedActions 		string `json:"recommended_actions"` // 推奨アクションのJSON配列（具体的な学習行動の提案）
+	NextGoals 				string `json:"next_goals"` // 次の学習目標のJSON配列（短期・中期目標の設定）
+	StudyPlan 				string `json:"study_plan"` // 個別学習プラン（期間、内容、方法を含む詳細プラン）
+	MotivationalMessage 	string `json:"motivational_message"` // モチベーション向上メッセージ（励ましや成長の認識）
+}
+
+// UpdateWeaknessLearningAdviceResponse は学習アドバイスを更新するレスポンス用構造体	
+type UpdateWeaknessLearningAdviceResponse struct {
+	ID 						string `json:"id"` // 更新された学習アドバイスレコードのID
 	AnalysisID 				string `json:"analysis_id"` // 親分析レコードのID
 	LearningAdvice 			string `json:"learning_advice"` // 個別学習アドバイス（具体的な学習方法や注意点）
 	RecommendedActions 		string `json:"recommended_actions"` // 推奨アクションのJSON配列（具体的な学習行動の提案）

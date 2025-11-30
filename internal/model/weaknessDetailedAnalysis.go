@@ -95,6 +95,42 @@ type CreateWeaknessDetailedAnalysisRequest struct {
 	StructureExamples     string `json:"structure_examples" binding:"required"`     // 構成の具体例JSON配列
 }
 
+// UpdateWeaknessDetailedAnalysisRequest は詳細分析結果を更新するリクエスト用構造体
+type UpdateWeaknessDetailedAnalysisRequest struct {
+	ID                    string `json:"id" binding:"required"`                    // 更新対象の詳細分析レコードのID（必須）
+	AnalysisID            string `json:"analysis_id" binding:"required"`            // 親分析レコードのID（必須）
+	GrammarScore          int    `json:"grammar_score" binding:"required"`          // 文法スコア（0-100）
+	GrammarDescription    string `json:"grammar_description" binding:"required"`    // 文法面の詳細分析説明
+	GrammarExamples       string `json:"grammar_examples" binding:"required"`       // 文法の具体例JSON配列
+	VocabularyScore       int    `json:"vocabulary_score" binding:"required"`       // 語彙スコア（0-100）
+	VocabularyDescription string `json:"vocabulary_description" binding:"required"` // 語彙面の詳細分析説明
+	VocabularyExamples    string `json:"vocabulary_examples" binding:"required"`    // 語彙の具体例JSON配列
+	ExpressionScore       int    `json:"expression_score" binding:"required"`       // 表現スコア（0-100）
+	ExpressionDescription string `json:"expression_description" binding:"required"` // 表現面の詳細分析説明
+	ExpressionExamples    string `json:"expression_examples" binding:"required"`    // 表現の具体例JSON配列
+	StructureScore        int    `json:"structure_score" binding:"required"`        // 構成スコア（0-100）
+	StructureDescription  string `json:"structure_description" binding:"required"`  // 構成面の詳細分析説明
+	StructureExamples     string `json:"structure_examples" binding:"required"`     // 構成の具体例JSON配列
+}
+
+// UpdateWeaknessDetailedAnalysisResponse は詳細分析結果を更新するレスポンス用構造体
+type UpdateWeaknessDetailedAnalysisResponse struct {
+	ID                    string `json:"id"`                    // 更新された詳細分析レコードのID
+	AnalysisID            string `json:"analysis_id"`            // 親分析レコードのID
+	GrammarScore          int    `json:"grammar_score"`          // 文法スコア（0-100）
+	GrammarDescription    string `json:"grammar_description"`    // 文法面の詳細分析説明
+	GrammarExamples       string `json:"grammar_examples"`       // 文法の具体例JSON配列
+	VocabularyScore       int    `json:"vocabulary_score"`       // 語彙スコア（0-100）
+	VocabularyDescription string `json:"vocabulary_description"` // 語彙面の詳細分析説明
+	VocabularyExamples    string `json:"vocabulary_examples"`    // 語彙の具体例JSON配列
+	ExpressionScore       int    `json:"expression_score"`       // 表現スコア（0-100）
+	ExpressionDescription string `json:"expression_description"` // 表現面の詳細分析説明
+	ExpressionExamples    string `json:"expression_examples"`    // 表現の具体例JSON配列
+	StructureScore        int    `json:"structure_score"`        // 構成スコア（0-100）
+	StructureDescription  string `json:"structure_description"`  // 構成面の詳細分析説明
+	StructureExamples     string `json:"structure_examples"`     // 構成の具体例JSON配列
+}
+
 // CreateWeaknessDetailedAnalysisResponse は詳細分析結果を作成するレスポンス用構造体
 type CreateWeaknessDetailedAnalysisResponse struct {
 	ID                    string `json:"id"`                     // 作成された詳細分析レコードのID

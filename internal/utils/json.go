@@ -61,3 +61,17 @@ func ParseJSONStringArray(jsonStr string) ([]string, error) {
 
 	return result, nil
 }
+
+// StringArrayToJSON 文字列配列をJSON文字列に変換する
+func StringArrayToJSON(arr []string) (string, error) {
+	if len(arr) == 0 {
+		return "[]", nil
+	}
+
+	jsonBytes, err := json.Marshal(arr)
+	if err != nil {
+		return "", fmt.Errorf("文字列配列のJSON変換に失敗しました: %w", err)
+	}
+
+	return string(jsonBytes), nil
+}

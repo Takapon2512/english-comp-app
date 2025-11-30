@@ -10,6 +10,11 @@ type CreateWeaknessAnalysisRequest struct {
 	ProjectID string `json:"project_id" binding:"required"` // 分析対象プロジェクトのID（必須）
 }
 
+type UpdateWeaknessAnalysisRequestService struct {
+	ProjectID string `json:"project_id" binding:"required"` // 分析対象プロジェクトのID（必須）
+	AnalysisId string `json:"analysis_id" binding:"required"` // 分析結果のID（必須）
+}
+
 // CreateWeaknessAnalysisResponse はLLM分析開始のレスポンス用構造体
 // 分析処理は非同期で実行されるため、処理状況を確認するためのIDを返す
 type CreateWeaknessAnalysisResponse struct {
@@ -87,4 +92,12 @@ type WeaknessAnalysisAllSummary struct {
 	WeaknessCategoryAnalysisSummary []WeaknessCategoryAnalysisResponse `json:"weakness_category_analysis_summary"`
 	WeaknessDetailedAnalysisSummary WeaknessDetailedAnalysisSummary    `json:"weakness_detailed_analysis_summary"`
 	WeaknessLearningAdviceSummary   WeaknessLearningAdviceSummary      `json:"weakness_learning_advice_summary"`
+}
+
+// WeaknessAnalysisStatusSummary は分析状況のサマリーを表す構造体
+type WeaknessAnalysisStatusSummary struct {
+	ID string `json:"id"` // 分析結果のID
+	ProjectID string `json:"project_id"` // 分析対象プロジェクトのID
+	UserID string `json:"user_id"` // 分析対象ユーザーのID
+	AnalysisStatus string `json:"analysis_status"` // 分析処理状況
 }
